@@ -132,7 +132,7 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     printf("Falha no processamento.\n");
     exit(0);
     }
-    fwrite("0",sizeof(char),1,pArquivo); // registro de cabeÁalho
+    fwrite("0",sizeof(char),1,pArquivo); // registro de cabe√ßalho
 
     pArquivoCidades=fopen("cities.txt","rb");
     if (pArquivoCidades == NULL)
@@ -922,7 +922,7 @@ int main () {
         case 3:
             printf("Qual o nome do arquivo que sera ordenado?");
             scanf("%s",strEntrada);
-            intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que ser· ordenado
+            intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que ser√° ordenado
             pRegistro=calloc(intEntrada,sizeof(tRegistro));
 
             lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);
