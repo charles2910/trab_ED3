@@ -10,6 +10,9 @@
 #define c3 20
 #define c4 10
 
+//SIZE_OF registro == 64 bytes
+//Numero de registros por paginas de disco == 64
+
 typedef struct{
     int numero;
     char str1[30];
@@ -70,6 +73,7 @@ void coletorLixo(tRegistro *registro)       //remove os espacos vazios nos campo
 ////////////////////////////////////////////////////////////////////////////////
 int printarRegistros(int numeroRegistros,char *nome)
 {
+    numeroRegistros = 6000;
     if(numeroRegistros==0)
     {
         printf("Arquivo vazio.\n");
@@ -78,8 +82,9 @@ int printarRegistros(int numeroRegistros,char *nome)
 
     FILE *pArquivo;
     tRegistro *pReg;
+    pReg = (tRegistro *) calloc(64, sizeof(tRegistro));
     tRegistro regTMP;
-    pReg=&regTMP;
+    //pReg=&regTMP;
 
     pArquivo=fopen(nome,"rb");
     if (pArquivo == NULL)
@@ -87,29 +92,36 @@ int printarRegistros(int numeroRegistros,char *nome)
     printf("Falha no processamento.\n");
     exit (0);
     }
-
-    fseek(pArquivo,sizeof(char),SEEK_SET);
-
+    long int v = sizeof(tRegistro);
+    fseek(pArquivo, 4096, ftell(pArquivo));
+    printf("%ld\n", ftell(pArquivo));
     //Printa cada registro na tela char a char, eliminando o @
-    for(int i=0;i<numeroRegistros;i++)
+    for(int i = 0; i <= (int)(numeroRegistros/64); i++)
     {
-        fread(pReg,sizeof(tRegistro),1,pArquivo);
-        printf("%d   ",(*pReg).numero);
-        for(int j=0;(*pReg).str1[j]!='@';j++)
+        if(feof(pArquivo))
+            break;
+        fread(pReg, sizeof(tRegistro), 64, pArquivo);
+        for(long int t = 0; t < 64; t++)
         {
-            printf("%c",(*pReg).str1[j]);
+            //printf("%ld   %ld  %ld\n",pReg, (pReg + t*v), pReg+1);
+            printf("%d   ",pReg[t].numero);
+            for(int j=0;pReg[t].str1[j]!='@';j++)
+            {
+                printf("%c",pReg[t].str1[j]);
+            }
+            printf("   ");
+            for(int j=0;pReg[t].str2[j]!='@';j++)
+            {
+                printf("%c",pReg[t].str2[j]);
+            }
+            printf("   ");
+            for(int j=0;j<c4;j++)
+            {
+                printf("%c",pReg[t].data[j]);
+            }
+            printf("\n");
         }
-        printf("   ");
-        for(int j=0;(*pReg).str2[j]!='@';j++)
-        {
-            printf("%c",(*pReg).str2[j]);
-        }
-        printf("   ");
-        for(int j=0;j<c4;j++)
-        {
-            printf("%c",(*pReg).data[j]);
-        }
-        printf("\n");
+
     }
     fclose(pArquivo);
     return 0;
@@ -133,6 +145,8 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     exit(0);
     }
     fwrite("0",sizeof(char),1,pArquivo); // registro de cabeçalho
+    for (int k = 0; k < 4095; k++)
+        fwrite("@", sizeof(char), 1, pArquivo);
 
     pArquivoCidades=fopen("cities.txt","rb");
     if (pArquivoCidades == NULL)
@@ -917,6 +931,7 @@ int main () {
         case 2:
             printf("Qual o nome do arquivo que sera lido?");
             scanf("%s",strEntrada);
+            printf("%d\n",lerTotalArquivos(strEntrada));
             printarRegistros(lerTotalArquivos(strEntrada),strEntrada);
             break;
         case 3:
