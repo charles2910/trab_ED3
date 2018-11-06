@@ -25,10 +25,9 @@ typedef struct{
     int numeroRegistros;
     int ordenacao; //1- ordenado, 0-nao ordenado
 } tArquivos;
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-void coletorLixo(tRegistro *registro)       //remove os espacos vazios nos campos, adicionando @ a eles.
+
+//remove os espacos vazios nos campos, adicionando @ a eles.
+void coletorLixo(tRegistro *registro)
 {
     for(int i=0;i<c2;i++)
    {
@@ -68,12 +67,30 @@ void coletorLixo(tRegistro *registro)       //remove os espacos vazios nos campo
        }
    }
 }
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
+
+int atualizarPaginaRAM (tRegistro *vetor, FILE *fp) {
+    if(fread(vetor, sizeof(tRegistro), 64, fp))
+        return 1;
+    else
+        return 0;
+}
+
+tRegistro *inicializarArqEmRAM (FILE *fp) {
+    tRegistro *novaPag;
+
+    if (ftell(fp) == 0)
+        fseek(fp, 4096, ftell(fp));
+    else {
+        printf("ERRO em inicializarArqEmRAM: Stream pointer not in 0.\n");
+        return NULL;
+    }
+    novaPag = (tRegistro *) calloc(64, sizeof(tRegistro));
+    return novaPag;
+}
+
 int printarRegistros(int numeroRegistros,char *nome)
 {
-    numeroRegistros = 6000;
+    //numeroRegistros = 6000;
     if(numeroRegistros==0)
     {
         printf("Arquivo vazio.\n");
@@ -82,7 +99,6 @@ int printarRegistros(int numeroRegistros,char *nome)
 
     FILE *pArquivo;
     tRegistro *pReg;
-    pReg = (tRegistro *) calloc(64, sizeof(tRegistro));
     tRegistro regTMP;
     //pReg=&regTMP;
 
@@ -92,15 +108,15 @@ int printarRegistros(int numeroRegistros,char *nome)
     printf("Falha no processamento.\n");
     exit (0);
     }
-    long int v = sizeof(tRegistro);
-    fseek(pArquivo, 4096, ftell(pArquivo));
+    long int v = 0;
+    pReg = inicializarArqEmRAM(pArquivo);
     printf("%ld\n", ftell(pArquivo));
     //Printa cada registro na tela char a char, eliminando o @
     for(int i = 0; i <= (int)(numeroRegistros/64); i++)
     {
-        if(feof(pArquivo))
-            break;
-        fread(pReg, sizeof(tRegistro), 64, pArquivo);
+        //if(feof(pArquivo))
+        //    break;
+        atualizarPaginaRAM(pReg, pArquivo);
         for(long int t = 0; t < 64; t++)
         {
             //printf("%ld   %ld  %ld\n",pReg, (pReg + t*v), pReg+1);
@@ -120,16 +136,16 @@ int printarRegistros(int numeroRegistros,char *nome)
                 printf("%c",pReg[t].data[j]);
             }
             printf("\n");
+            if(++v == numeroRegistros)
+                break;
         }
-
+        if(v == numeroRegistros)
+            break;
     }
     fclose(pArquivo);
     return 0;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
 void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
 {
@@ -296,11 +312,9 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     fclose(pArquivoNomes);
     printf("Arquivo gerado.\n");
 }
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
-void lerArquivoParaRAM(tRegistro *pReg,char *nome,int totalDeRegistros)     //Le para a RAM os registros de um arquivo
+//Le para a RAM os registros de um arquivo
+void lerArquivoParaRAM(tRegistro *pReg,char *nome,int totalDeRegistros)
 {
     FILE *pArquivo;
     pArquivo=fopen(nome,"rb");
@@ -313,8 +327,8 @@ void lerArquivoParaRAM(tRegistro *pReg,char *nome,int totalDeRegistros)     //Le
     fread(pReg,sizeof(tRegistro),totalDeRegistros,pArquivo);
     fclose(pArquivo);
 }
-
-void gravaArquivoParaMEM(tRegistro *pReg,char *nome,int totalDeRegistros)   //Grava o conteudo de registros em RAM num arquivo
+//Grava o conteudo de registros em RAM num arquivo
+void gravaArquivoParaMEM(tRegistro *pReg,char *nome,int totalDeRegistros)
 {
     FILE *pArquivo;
     pArquivo=fopen(nome,"wb");
@@ -330,12 +344,8 @@ void gravaArquivoParaMEM(tRegistro *pReg,char *nome,int totalDeRegistros)   //Gr
     fclose(pArquivo);
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-void salvarTotalArquivos(int numeroRegistros,char *nome,int ordenacao)  //Adiciona as informacoes de um arquivo criado novo ao arquivo totarquivos
+//Adiciona as informacoes de um arquivo criado novo ao arquivo totarquivos
+void salvarTotalArquivos(int numeroRegistros,char *nome,int ordenacao)
 {
     FILE *pTotalArquivos;
     tArquivos *pArquivo;
@@ -356,7 +366,8 @@ void salvarTotalArquivos(int numeroRegistros,char *nome,int ordenacao)  //Adicio
     fclose(pTotalArquivos);
 }
 
-int lerTotalArquivos(char *nome)    //Entra com o nome do arquivo e retorna A QUANTIDADE DE REGISTROS que o arquivo pedido tem.
+//Entra com o nome do arquivo e retorna A QUANTIDADE DE REGISTROS que o arquivo pedido tem.
+int lerTotalArquivos(char *nome)
 {
     FILE *pTotalArquivos;
     tArquivos *pArquivo;
@@ -384,7 +395,8 @@ int lerTotalArquivos(char *nome)    //Entra com o nome do arquivo e retorna A QU
     return 0;
 }
 
-int contarRegistros(char *nome) // conta o total de registro que certo arquivo tem
+// conta o total de registro que certo arquivo tem
+int contarRegistros(char *nome)
 {
     FILE *pArquivo;
     tRegistro *pReg;
@@ -408,8 +420,8 @@ int contarRegistros(char *nome) // conta o total de registro que certo arquivo t
     return contador-1;
 }
 
-int checarOrdenacao(char *nome)    //Entra com o nome do arquivo e retorna se o arquivo esta ordenado ou nao.
-{
+//Entra com o nome do arquivo e retorna se o arquivo esta ordenado ou nao.
+int checarOrdenacao(char *nome) {
     FILE *pTotalArquivos;
     tArquivos *pArquivo;
     tArquivos arquivo;
@@ -435,9 +447,6 @@ int checarOrdenacao(char *nome)    //Entra com o nome do arquivo e retorna se o 
     fclose(pTotalArquivos);
     return 0;
 }
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////qsort/////////////////////////////////////////////////
 
 int cmpFunc (const void * a, const void * b) {
     const tRegistro *p1 = a;
@@ -469,12 +478,7 @@ int cmpFunc (const void * a, const void * b) {
         return(-1);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida)
-{
+void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
     FILE *pArq1;
     FILE *pArq2;
     FILE *pArqSaida;
@@ -516,84 +520,84 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida)
 
         while((!feof(pArq2))&&(!feof(pArq1)))
         {
-            if(pReg1->numero<pReg2->numero)
+            if(pReg1->numero < pReg2->numero)
             {
                 fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                 fread(pReg1,sizeof(tRegistro),1,pArq1);
             }
             else
             {
-                if(pReg1->numero>pReg2->numero)
+                if(pReg1->numero > pReg2->numero)
                 {
                     fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
                     fread(pReg2,sizeof(tRegistro),1,pArq2);
                 }
                 else
                 {
-                    if(strcmp(pReg1->str1,pReg2->str1)<0)
+                    if(strcmp(pReg1->str1, pReg2->str1) < 0)
                     {
                         fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                         fread(pReg1,sizeof(tRegistro),1,pArq1);
                     }
                     else
                     {
-                        if(strcmp(pReg1->str1,pReg2->str1)>0)
+                        if(strcmp(pReg1->str1,pReg2->str1) > 0)
                         {
                             fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
                             fread(pReg2,sizeof(tRegistro),1,pArq2);
                         }
                         else
                         {
-                            if(strcmp(pReg1->str2,pReg2->str2)<0)
+                            if(strcmp(pReg1->str2,pReg2->str2) < 0)
                             {
                                 fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                 fread(pReg1,sizeof(tRegistro),1,pArq1);
                             }
                             else
                             {
-                                if(strcmp(pReg1->str2,pReg2->str2)>0)
+                                if(strcmp(pReg1->str2,pReg2->str2) > 0)
                                 {
                                     fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
                                     fread(pReg2,sizeof(tRegistro),1,pArq2);
                                 }
                                 else
                                 {
-                                    if(atoi(&pReg1->data[6])<atoi(&pReg2->data[6]))
+                                    if(atoi(&pReg1->data[6]) < atoi(&pReg2->data[6]))
                                     {
                                         fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                         fread(pReg1,sizeof(tRegistro),1,pArq1);
                                     }
                                     else
                                     {
-                                        if(atoi(&pReg1->data[6])>atoi(&pReg2->data[6]))
+                                        if(atoi(&pReg1->data[6]) > atoi(&pReg2->data[6]))
                                         {
                                             fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
                                             fread(pReg2,sizeof(tRegistro),1,pArq2);
                                         }
                                         else
                                         {
-                                            if(atoi(&pReg1->data[3])<atoi(&pReg2->data[3]))
+                                            if(atoi(&pReg1->data[3]) < atoi(&pReg2->data[3]))
                                             {
                                                 fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                                 fread(pReg1,sizeof(tRegistro),1,pArq1);
                                             }
                                             else
                                             {
-                                                if(atoi(&pReg1->data[3])>atoi(&pReg2->data[3]))
+                                                if(atoi(&pReg1->data[3]) > atoi(&pReg2->data[3]))
                                                 {
                                                     fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
                                                     fread(pReg2,sizeof(tRegistro),1,pArq2);
                                                 }
                                                 else
                                                 {
-                                                    if(atoi(&pReg1->data[0])<atoi(&pReg2->data[0]))
+                                                    if(atoi(&pReg1->data[0]) < atoi(&pReg2->data[0]))
                                                     {
                                                         fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                                         fread(pReg1,sizeof(tRegistro),1,pArq1);
                                                     }
                                                     else
                                                     {
-                                                        if(atoi(&pReg1->data[0])>atoi(&pReg2->data[0]))
+                                                        if(atoi(&pReg1->data[0]) > atoi(&pReg2->data[0]))
                                                         {
                                                             fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
                                                             fread(pReg2,sizeof(tRegistro),1,pArq2);
@@ -634,12 +638,7 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida)
     fclose(pArqSaida);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int qtdReg2)
-{
+void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int qtdReg2) {
     FILE *pArq1;
     FILE *pArq2;
     FILE *pArqSaida;
@@ -874,19 +873,15 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
 
 }
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-/*
-void multiwaymerge()
-{
+
+
+void multiwaymerge(char *nomeArquivos) {
+    
 
 }
-*/
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
+
+
 int main () {
     srand(time(NULL));
     int flag=1;
