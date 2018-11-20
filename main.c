@@ -26,6 +26,58 @@ typedef struct{
     int ordenacao; //1- ordenado, 0-nao ordenado
 } tArquivos;
 
+typedef struct {
+    FILE * arqEntrada;
+    FILE   arqSaida;
+    int    numArqEntrada;
+} pARQUIVOS;
+
+typedef struct {
+    char  **arqEntrada;
+    char   arqSaida[30];
+    int    numArq;
+} ARQUIVOS;
+
+typedef struct noHeap {
+    tRegistro * registro;
+    struct noHeap * filhoDir;
+    struct noHeap * filhoEsq;
+} NO_HEAP;
+
+void swap (NO_HEAP vetor[], int i, int j) {
+    NO_HEAP aux;
+    aux = vetor[i];
+    vetor[i] = vetor[j];
+    vetor[j] = aux;
+}
+
+void heapify(NO_HEAP arr[], int n, int i) {
+    int smaller = i;
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+
+    if (l < n && arr[l].registro->numero > arr[smaller].registro->numero)
+        smaller = l;
+    if (r < n && arr[r].registro->numero > arr[smaller].registro->numero)
+        smaller = r;
+    if (smaller != i)
+    {
+        swap(arr, i, smaller);
+        heapify(arr, n, smaller);
+    }
+}
+
+void heapSort(NO_HEAP arr[], int n)
+{
+    for (int i = n / 2 - 1; i >= 0; i--)
+        heapify(arr, n, i);
+    for (int i = n - 1; i >= 0; i--)
+    {
+        swap(arr, 0, i);
+        heapify(arr, i, 0);
+    }
+}
+
 //remove os espacos vazios nos campos, adicionando @ a eles.
 void coletorLixo(tRegistro *registro)
 {
@@ -142,6 +194,8 @@ int printarRegistros(int numeroRegistros,char *nome)
         if(v == numeroRegistros)
             break;
     }
+    printf("\n\n");
+    fwrite(pReg, sizeof(pReg), 64, stdout);
     fclose(pArquivo);
     return 0;
 }
@@ -873,10 +927,52 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
 
 }
 
+int nomeArquivos(ARQUIVOS **parq) {
+    char *entrada, *scanI, *pch, **pString;
+    ARQUIVOS *arq;
+    arq = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
+    arq->arqEntrada = (char **) calloc(3002, sizeof(char *));
+    entrada = (char *) malloc(3002*30*sizeof(char));
 
+    if(arq == NULL || parq == NULL)
+        exit(-1);
+
+    scanI = entrada;
+    arq->numArq = 0;
+
+    fgets (entrada, (3002 * 30 * sizeof(char)), stdin);
+    pch = strtok (entrada, " ");
+
+    for (int b = 0; b < 3002; b++)
+    {
+        if ((scanI == NULL) || (pch == NULL))
+            break;
+        strcpy(scanI, pch);
+        arq->arqEntrada[b] = (char *) malloc((strlen(pch) + 1)*sizeof(char));
+        strcpy(arq->arqEntrada[b],scanI);
+        pch = strtok (NULL, " ");
+        arq->numArq += 1;
+    }
+    pString = (char **) calloc((arq->numArq) - 1, sizeof(char *));
+    for(int l = 0; l < arq->numArq; l++) {
+        if (l == ((arq->numArq) - 1))
+            strcpy(arq->arqSaida, arq->arqEntrada[l]);
+        else {
+            pString[l] = arq->arqEntrada[l];
+            printf("%d: %s\n", l, pString[l]);
+        }
+    }
+    printf("%s\n", arq->arqSaida);
+    free(arq->arqEntrada);
+    arq->arqEntrada = pString;
+    free(entrada);
+    *parq = arq;
+    return 0;
+}
 
 void multiwaymerge(char *nomeArquivos) {
-    
+    //pARQUIVOS *ponteiroArquivos = abrirArquivos(nomeArquivos);
+
 
 }
 
@@ -905,109 +1001,131 @@ int main () {
     exit(0);
     }
     fclose(pTotalArquivos);
+    printf("Batata_main_0\n");
+    ARQUIVOS *arquivo;
+    printf("Batata_main_1\n");
+    nomeArquivos(&arquivo);
+    printf("Batata_main_2\n");
 
+    /*
     //execucao
     while(flag==1)
     {
-        printf("1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?");
-        scanf("%d",&intEntrada);
-        switch(intEntrada)
+        int intEntrada = 9;
+        while (intEntrada != 0)
         {
-        case 1:
-            printf("Qual o nome do arquivo que sera gerado?");
-            scanf("%s",strEntrada);
-            printf("Quantos registros terao o arquivo?");
-            scanf("%d",&Nregistros);
-            salvarTotalArquivos(Nregistros,strEntrada,0);
-            tRegistro *pRegistro = calloc(Nregistros,sizeof(tRegistro));
-            gerarRegistros(Nregistros,pRegistro,strEntrada);
-            free(pRegistro);
-            break;
-        case 2:
-            printf("Qual o nome do arquivo que sera lido?");
-            scanf("%s",strEntrada);
-            printf("%d\n",lerTotalArquivos(strEntrada));
-            printarRegistros(lerTotalArquivos(strEntrada),strEntrada);
-            break;
-        case 3:
-            printf("Qual o nome do arquivo que sera ordenado?");
-            scanf("%s",strEntrada);
-            intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que será ordenado
-            pRegistro=calloc(intEntrada,sizeof(tRegistro));
+            intEntrada = 9;
+            printf("Digite a intEntrada a ser executada:\n\n");
+            printf("1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?");
+            scanf("%d",&intEntrada);
 
-            lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);
+            if (intEntrada == 1) {
+                printf("Qual o nome do arquivo que sera gerado?");
+                scanf("%s",strEntrada);
+                printf("Quantos registros terao o arquivo?");
+                scanf("%d",&Nregistros);
+                salvarTotalArquivos(Nregistros,strEntrada,0);
+                tRegistro *pRegistro = calloc(Nregistros,sizeof(tRegistro));
+                gerarRegistros(Nregistros,pRegistro,strEntrada);
+                free(pRegistro);
+            }
+            if (intEntrada == 2) {
+                printf("Qual o nome do arquivo que sera lido?");
+                scanf("%s",strEntrada);
+                printf("%d\n",lerTotalArquivos(strEntrada));
+                printarRegistros(lerTotalArquivos(strEntrada),strEntrada);
+            }
+            if (intEntrada == 3) {
+                printf("Qual o nome do arquivo que sera ordenado?");
+                scanf("%s",strEntrada);
+                intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que será ordenado
+                tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
 
-            qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc);
+                lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);
 
-            printf("Qual o nome do arquivo novo?");
-            scanf("%s",strEntrada);
-            gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);
-            free(pRegistro);
+                qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc);
 
-            salvarTotalArquivos(intEntrada,strEntrada,1);
-            printf("Arquivo de dados de entrada ordenado.\n");
-            printf("Arquivo gerado.\n");
-            break;
-        case 4:
-            printf("Qual o nome do primeiro arquivo?");
-            scanf("%s",strEntrada);
-            if(checarOrdenacao(strEntrada))
-            {
-                printf("Qual o nome do segundo arquivo?");
-                scanf("%s",strEntrada2);
-                if(checarOrdenacao(strEntrada2))
+                printf("Qual o nome do arquivo novo?");
+                scanf("%s",strEntrada);
+                gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);
+                free(pRegistro);
+
+                salvarTotalArquivos(intEntrada,strEntrada,1);
+                printf("Arquivo de dados de entrada ordenado.\n");
+                printf("Arquivo gerado.\n");
+            }
+            if (intEntrada == 4) {
+                printf("Qual o nome do primeiro arquivo?");
+                scanf("%s",strEntrada);
+                if(checarOrdenacao(strEntrada))
                 {
-                    printf("Qual o nome do arquivo gerado?");
-                    scanf("%s",strEntrada3);
-                    merging(strEntrada,strEntrada2,strEntrada3);
-                    salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);
-                    printf("Arquivo gerado.\n");
+                    printf("Qual o nome do segundo arquivo?");
+                    scanf("%s",strEntrada2);
+                    if(checarOrdenacao(strEntrada2))
+                    {
+                        printf("Qual o nome do arquivo gerado?");
+                        scanf("%s",strEntrada3);
+                        merging(strEntrada,strEntrada2,strEntrada3);
+                        salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);
+                        printf("Arquivo gerado.\n");
+                    }
+                    else
+                    {
+                        printf("Arquivo nao esta ordenado ou nao existe.\n");
+                    }
                 }
                 else
                 {
                     printf("Arquivo nao esta ordenado ou nao existe.\n");
                 }
             }
-            else
-            {
-                printf("Arquivo nao esta ordenado ou nao existe.\n");
-            }
-            break;
-        case 5:
-            printf("Qual o nome do primeiro arquivo?");
-            scanf("%s",strEntrada);
-            if(checarOrdenacao(strEntrada))
-            {
-                printf("Qual o nome do segundo arquivo?");
-                scanf("%s",strEntrada2);
-                if(checarOrdenacao(strEntrada2))
+            if (intEntrada == 5) {
+                printf("Qual o nome do primeiro arquivo?");
+                scanf("%s",strEntrada);
+                if(checarOrdenacao(strEntrada))
                 {
-                    printf("Qual o nome do arquivo gerado?");
-                    scanf("%s",strEntrada3);
-                    matching(strEntrada,strEntrada2,strEntrada3,contarRegistros(strEntrada),contarRegistros(strEntrada2));
-                    salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);
-                    printf("Arquivo gerado.\n");
+                    printf("Qual o nome do segundo arquivo?");
+                    scanf("%s",strEntrada2);
+                    if(checarOrdenacao(strEntrada2))
+                    {
+                        printf("Qual o nome do arquivo gerado?");
+                        scanf("%s",strEntrada3);
+                        matching(strEntrada,strEntrada2,strEntrada3,contarRegistros(strEntrada),contarRegistros(strEntrada2));
+                        salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);
+                        printf("Arquivo gerado.\n");
+                    }
+                    else
+                    {
+                        printf("Arquivo nao esta ordenado ou nao existe.\n");
+                    }
                 }
                 else
                 {
                     printf("Arquivo nao esta ordenado ou nao existe.\n");
                 }
             }
-            else
-            {
-                printf("Arquivo nao esta ordenado ou nao existe.\n");
+            if (intEntrada == 6) {
+                ARQUIVOS *arquivo;
+                printf("Digite os nomes dos arquivos\n");
+                printf("BAtata_-3");
+
+                printf("BAtata_-2");
+                nomeArquivos(&arquivo);
+                printf("BAtata_-1");
+                for(int k = 0; k <= arquivo->numArq; k++)
+                    printf("%s\n", arquivo->arqEntrada[k]);
             }
-            break;
-        case 6:
-            break;
-        case 0:
-            flag=0;
-            break;
-        case 9:
-            scanf("%s",strEntrada);
-            printf("%d",contarRegistros(strEntrada));
+            if (intEntrada == 0) {
+                flag = 0;
+                break;
+            }
+
+            if (intEntrada == 9) {
+                scanf("%s",strEntrada);
+                printf("%d",contarRegistros(strEntrada));
+            }
+
         }
-    }
-
+    }*/
    return(0);
 }
