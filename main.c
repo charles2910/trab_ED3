@@ -966,6 +966,8 @@ int nomeArquivos(ARQUIVOS **parq) {
     free(arq->arqEntrada);
     arq->arqEntrada = pString;
     free(entrada);
+    arq->numArq -= 1;
+    printf("%d\n", arq->numArq);
     *parq = arq;
     return 0;
 }
@@ -1002,12 +1004,7 @@ int main () {
     }
     fclose(pTotalArquivos);
     printf("Batata_main_0\n");
-    ARQUIVOS *arquivo;
-    printf("Batata_main_1\n");
-    nomeArquivos(&arquivo);
-    printf("Batata_main_2\n");
 
-    /*
     //execucao
     while(flag==1)
     {
@@ -1105,15 +1102,13 @@ int main () {
                 }
             }
             if (intEntrada == 6) {
+                getchar();
                 ARQUIVOS *arquivo;
                 printf("Digite os nomes dos arquivos\n");
-                printf("BAtata_-3");
-
                 printf("BAtata_-2");
                 nomeArquivos(&arquivo);
                 printf("BAtata_-1");
-                for(int k = 0; k <= arquivo->numArq; k++)
-                    printf("%s\n", arquivo->arqEntrada[k]);
+
             }
             if (intEntrada == 0) {
                 flag = 0;
@@ -1126,6 +1121,6 @@ int main () {
             }
 
         }
-    }*/
+    }
    return(0);
 }
