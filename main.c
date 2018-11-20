@@ -927,20 +927,21 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
 
 }
 
-int nomeArquivos(ARQUIVOS **parq) {
+int nomeArquivos(ARQUIVOS **parq, char *argv[]) {
     char *entrada, *scanI, *pch, **pString;
     ARQUIVOS *arq;
     arq = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
     arq->arqEntrada = (char **) calloc(3002, sizeof(char *));
-    entrada = (char *) malloc(3002*30*sizeof(char));
-
+    entrada = *argv;
+    for (int t = 0; t < 4; t++)
+        printf("%d: %s\n", t, argv[t]);
     if(arq == NULL || parq == NULL)
         exit(-1);
 
     scanI = entrada;
     arq->numArq = 0;
 
-    fgets (entrada, (3002 * 30 * sizeof(char)), stdin);
+    //fgets (entrada, (3002 * 30 * sizeof(char)), stdin);
     pch = strtok (entrada, " ");
 
     for (int b = 0; b < 3002; b++)
@@ -980,7 +981,7 @@ void multiwaymerge(char *nomeArquivos) {
 
 
 
-int main () {
+int main (int argc, char *argv[]) {
     srand(time(NULL));
     int flag=1;
     FILE *pf;
@@ -1013,7 +1014,7 @@ int main () {
         {
             intEntrada = 9;
             printf("Digite a intEntrada a ser executada:\n\n");
-            printf("1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?");
+            printf("1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?\n");
             scanf("%d",&intEntrada);
 
             if (intEntrada == 1) {
@@ -1106,7 +1107,7 @@ int main () {
                 ARQUIVOS *arquivo;
                 printf("Digite os nomes dos arquivos\n");
                 printf("BAtata_-2");
-                nomeArquivos(&arquivo);
+                nomeArquivos(&arquivo, argv);
                 printf("BAtata_-1");
 
             }
