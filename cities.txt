@@ -1272,7 +1272,6 @@ Bellerose
 Belleview
 Belleville
 Bellevue
-Bellevue (historical), Town of
 Bellewood
 Bellflower
 Bellingham
@@ -8620,7 +8619,6 @@ Indian Harbour Beach
 Indian Head
 Indian Head Park
 Indian Hills
-Indian Hills Cherokee Section
 Indian Lake
 Indian Mound
 Indian Pass
@@ -10389,7 +10387,6 @@ Litroe
 Littig
 Little America
 Little Canada
-Little Cottonwood Creek Valley
 Little Creek
 Little Cypress
 Little Eagle
