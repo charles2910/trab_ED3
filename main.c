@@ -957,23 +957,26 @@ int nomeArquivos(ARQUIVOS **parq) {
     for(int l = 0; l < arq->numArq; l++) {
         if (l == ((arq->numArq) - 1))
             strcpy(arq->arqSaida, arq->arqEntrada[l]);
-        else {
+        else
             pString[l] = arq->arqEntrada[l];
-            printf("%d: %s\n", l, pString[l]);
-        }
     }
-    printf("%s\n", arq->arqSaida);
     free(arq->arqEntrada);
     arq->arqEntrada = pString;
     free(entrada);
     arq->numArq -= 1;
-    printf("%d\n", arq->numArq);
     *parq = arq;
     return 0;
 }
 
-void multiwaymerge(char *nomeArquivos) {
-    //pARQUIVOS *ponteiroArquivos = abrirArquivos(nomeArquivos);
+void multiwaymerge(/*ARQUIVOS **pArq*/) {
+    ARQUIVOS *pArquivos;
+    nomeArquivos(&pArquivos);
+    if (pArquivos != NULL) {
+        for (int k = 0; k < pArquivos->numArq; k++) {
+            printf("%d: %s\n", k, pArquivos->arqEntrada[k]);
+        }
+    } else
+        printf("ERRO MULTIWAY passagem pra nomeArquivos\n");
 
 
 }
@@ -1017,6 +1020,7 @@ int main () {
             scanf("%d",&intEntrada);
 
             if (intEntrada == 1) {
+                getchar();
                 printf("Qual o nome do arquivo que sera gerado?");
                 scanf("%s",strEntrada);
                 printf("Quantos registros terao o arquivo?");
@@ -1027,12 +1031,14 @@ int main () {
                 free(pRegistro);
             }
             if (intEntrada == 2) {
+                getchar();
                 printf("Qual o nome do arquivo que sera lido?");
                 scanf("%s",strEntrada);
                 printf("%d\n",lerTotalArquivos(strEntrada));
                 printarRegistros(lerTotalArquivos(strEntrada),strEntrada);
             }
             if (intEntrada == 3) {
+                getchar();
                 printf("Qual o nome do arquivo que sera ordenado?");
                 scanf("%s",strEntrada);
                 intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que será ordenado
@@ -1052,6 +1058,7 @@ int main () {
                 printf("Arquivo gerado.\n");
             }
             if (intEntrada == 4) {
+                getchar();
                 printf("Qual o nome do primeiro arquivo?");
                 scanf("%s",strEntrada);
                 if(checarOrdenacao(strEntrada))
@@ -1077,6 +1084,7 @@ int main () {
                 }
             }
             if (intEntrada == 5) {
+                getchar();
                 printf("Qual o nome do primeiro arquivo?");
                 scanf("%s",strEntrada);
                 if(checarOrdenacao(strEntrada))
@@ -1106,7 +1114,8 @@ int main () {
                 ARQUIVOS *arquivo;
                 printf("Digite os nomes dos arquivos\n");
                 printf("BAtata_-2");
-                nomeArquivos(&arquivo);
+                multiwaymerge();
+                //nomeArquivos(&arquivo);
                 printf("BAtata_-1");
 
             }
