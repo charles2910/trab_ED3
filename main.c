@@ -1044,13 +1044,6 @@ void multiwaymerge(ARQUIVOS **pArq) {
 
 }
 
-void multiwaymerge(char *nomeArquivos) {
-    //pARQUIVOS *ponteiroArquivos = abrirArquivos(nomeArquivos);
-
-
-}
-
-
 
 int main (int argc, char *argv[]) {
 
