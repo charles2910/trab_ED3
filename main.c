@@ -1018,25 +1018,30 @@ void multiwaymerge(char *nomeArquivos) {
 
 
 int main (int argc, char *argv[]) {
-    srand(time(NULL));
-    int flag=1;     //V�riavel que controla o loop da execu��o do programa
-    FILE *pf;
-    char strEntrada[30];        //Strings de entrada(input).
+
+    FILE *pf, *pTotalArquivos;
+
+    char strEntrada[30];
     char strEntrada2[30];
     char strEntrada3[30];
-    int intEntrada;             //inteiro de entrada(input).
-    int Nregistros;             //numero de registros que ter� no arquivo.
+    char strEntradaK[30][30];
 
-    //abertura do totalarquivos.bin para limpar o conteudo, ou criar
-    FILE *pTotalArquivos;
-    pTotalArquivos=fopen("totalarquivos.bin","wb");
+    int flag = 1, flagArgs = 1;
+    int intEntrada = 9;
+    int Nregistros;
+    int contador = 0;
+    int flagOrd = 1;
+
+    srand(time(NULL));
+
+    //abertura do totalarquivos para limpar o conteudo, ou criar
+    pTotalArquivos = fopen("totalarquivos.bin","wb");
     if (pTotalArquivos == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
     fclose(pTotalArquivos);
-    printf("Batata_main_0\n");
 
     //execucao
     while(flag==1)
