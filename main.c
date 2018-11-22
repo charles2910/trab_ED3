@@ -1009,6 +1009,41 @@ int nomeArquivos(ARQUIVOS **parq) {
     return 0;
 }
 
+int nomeArquivosArgv(ARQUIVOS **parq, int argc, char *argv[]) {
+    ARQUIVOS *arq;
+
+    arq = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
+    arq->arqEntrada = (char **) calloc(argc - 3, sizeof(char *));
+    arq->numArq = -1;
+
+    if(arq == NULL || parq == NULL || argv == NULL || arq->arqEntrada == NULL)
+        exit(-1);
+
+    for (int i = 2; i < (argc - 1); i++) {
+        arq->arqEntrada[i - 2] = argv[i];
+        printf("%s\n", arq->arqEntrada[i-2]);
+        arq->numArq += 1;
+    }
+    printf("%s\n", strcpy(arq->arqSaida, argv[argc - 1]));
+    *parq = arq;
+}
+
+void multiwaymerge(ARQUIVOS **pArq) {
+    ARQUIVOS *pArquivos;
+    FILE **fp;
+
+    pArquivos = *pArq;
+    fp = calloc((pArquivos->numArq) + 1, sizeof(FILE *));
+
+    for (int i = 0; i < pArquivos->numArq; i++) {
+        fp[i] = fopen(pArquivos->arqEntrada[i], "rb");
+        fwrite(fp[i], sizeof(char), 1, stdout);
+    }
+    fp[pArquivos->numArq] = fopen(pArquivos->arqSaida, "wb");
+
+
+}
+
 void multiwaymerge(char *nomeArquivos) {
     //pARQUIVOS *ponteiroArquivos = abrirArquivos(nomeArquivos);
 
