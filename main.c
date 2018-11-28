@@ -144,7 +144,7 @@ tRegistro *inicializarArqEmRAM (FILE *fp) {
     tRegistro *novaPag;
 
     if (ftell(fp) == 0)
-        fseek(fp, 4096, ftell(fp));
+        fseek(fp, 1, ftell(fp));
     else {
         printf("ERRO em inicializarArqEmRAM: Stream pointer not in 0.\n");
         return NULL;
@@ -208,7 +208,7 @@ int printarRegistros(int numeroRegistros,char *nome)
             break;
     }
     printf("\n\n");
-    fwrite(pReg, sizeof(pReg), 64, stdout);
+    //fwrite(pReg, sizeof(pReg), 64, stdout);
     fclose(pArquivo);
     return 0;
 }
@@ -228,8 +228,8 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     exit(0);
     }
     fwrite("0",sizeof(char),1,pArquivo); // registro de cabe�alho
-    for (int k = 0; k < 4095; k++)
-        fwrite("@", sizeof(char), 1, pArquivo);
+    /*for (int k = 0; k < 4095; k++)
+        fwrite("@", sizeof(char), 1, pArquivo);*/
 
     pArquivoCidades=fopen("cities.txt","rb");
     if (pArquivoCidades == NULL)
@@ -1071,6 +1071,98 @@ void multiwaymerge(ARQUIVOS **pArq) {
 
 }
 
+void mergeSortExterno(char *nome,char *nomeSaida) {
+    //Página de disco: tamanho 16.000 bytes
+    //tamanho do buffer: 4 páginas de disco = 4x16000=64000
+    //64000 bytes = 1000x64 = 1000 vezes o tamanho de 64 bytes(tamanho de 1 registro)
+    tRegistro *buffer=calloc(1000,sizeof(tRegistro));
+
+    //Matriz com o nome dos subarquivos. Cada subarquivo armazena 1000 registros.
+    char subarquivos[10][13];
+    strcpy(subarquivos[0],"sub_arquivo0");
+    strcpy(subarquivos[1],"sub_arquivo1");
+    strcpy(subarquivos[2],"sub_arquivo2");
+    strcpy(subarquivos[3],"sub_arquivo3");
+    strcpy(subarquivos[4],"sub_arquivo4");
+    strcpy(subarquivos[5],"sub_arquivo5");
+    strcpy(subarquivos[6],"sub_arquivo6");
+    strcpy(subarquivos[7],"sub_arquivo7");
+    strcpy(subarquivos[8],"sub_arquivo8");
+    strcpy(subarquivos[9],"sub_arquivo9");
+
+    FILE *pArquivoEntrada;
+    FILE *pArquivoSaida;
+    FILE *pSubarquivo;
+    int numeroDeRegistros=contarRegistros(nome); //Conta a quantidade de registros que o arquivo de entrada tem.
+    int numeroDeSubarquivos;            //quantidade de subarquivos que serão gerados.
+    int restoSubArquivo;                //resto de numeroDeRegistros/1000
+    int i;                              //contador.
+    int qtdDeSubarquivos;
+
+    pArquivoEntrada=fopen(nome,"rb"); //Abre-se arquivo de entrada para leitura e arquivo de saida para escrita.
+    if (pArquivoEntrada == NULL)
+    {
+    printf("Falha no processamento.\n");
+    exit(0);
+    }
+
+    pArquivoSaida=fopen(nomeSaida,"wb");
+    if (pArquivoSaida == NULL)
+    {
+    printf("Falha no processamento.\n");
+    exit(0);
+    }
+
+    fwrite("0",sizeof(char),1,pArquivoSaida); //Registro de cabeçalho do arquivo de saída
+    fseek(pArquivoEntrada,sizeof(char),SEEK_SET);
+
+    if(numeroDeRegistros<=1000) //Caso os registros do arquivo de entrada cabem no buffer da RAM, somente 1 sub arquivo é necessário na ordenação.
+    {
+        pSubarquivo=fopen(subarquivos[0],"wb");
+        fread(buffer,sizeof(tRegistro),numeroDeRegistros,pArquivoEntrada);
+        qsort(buffer, numeroDeRegistros, sizeof(tRegistro), cmpFunc);   //Ordena o arquivo.
+        fwrite(buffer,sizeof(tRegistro),numeroDeRegistros,pSubarquivo);
+        fwrite(buffer,sizeof(tRegistro),numeroDeRegistros,pArquivoSaida);
+        fclose(pSubarquivo);
+    }
+    else //Caso o arquivo de entrada contenha mais de 1000 registros, os registros são divididos em vários subarquivos.
+    {
+        numeroDeSubarquivos=numeroDeRegistros/1000;
+        for(i=0;i<numeroDeSubarquivos;i++)
+        {
+            pSubarquivo=fopen(subarquivos[i],"wb");
+            fread(buffer,sizeof(tRegistro),1000,pArquivoEntrada); //le o arquivo de entrada.
+            qsort(buffer, 1000, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite(buffer,sizeof(tRegistro),1000,pSubarquivo); //escreve no subarquivo.
+            fclose(pSubarquivo);
+        }
+
+        restoSubArquivo=numeroDeRegistros%1000; //a variável recebe a quantidade de registros que sobra no arquivo de entrada.
+        if(restoSubArquivo!=0)  //Se o resto for diferente de zero, o resto dos registros são escritos no próximo sub arquivo.
+        {
+            pSubarquivo=fopen(subarquivos[i],"wb");
+            fread(buffer,sizeof(tRegistro),restoSubArquivo,pArquivoEntrada); //le o arquivo de entrada.
+            qsort(buffer, restoSubArquivo, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite(buffer,sizeof(tRegistro),restoSubArquivo,pSubarquivo); //escreve no subarquivo.
+            fclose(pSubarquivo);
+        }
+        //A partir daqui os subarquivos já estao criados e ordenados. quantidade de sub arquivos: i+1
+        qtdDeSubarquivos=i+1; //subarquivos[0] ... subarquivos[qtdDeSubarquivos]
+        /*
+        Multiway merge nos subarquivos para gerar o arquivo de saida ordenado.
+        */
+
+
+    }
+
+    printf("Arquivo gerado.\n");
+    fseek(pArquivoSaida,0,SEEK_SET);
+    fwrite("1",sizeof(char),1,pArquivoSaida); // Atualiza o registro de cabeçalho do arquivo de saida
+    fclose(pArquivoSaida);
+    fclose(pArquivoEntrada);
+    free(buffer);
+}
+
 
 int main (int argc, char *argv[]) {
 
@@ -1110,45 +1202,45 @@ int main (int argc, char *argv[]) {
                 intEntrada = atoi(argv[1]);
             }
             else {
-                printf("Digite a opcao a ser executada:\n\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?\n");
+                printf("Digite a opcao a ser executada:\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?\n\n>");
                 scanf("%d",&intEntrada);
                 getchar();
+                flagArgs = 0;
             }
 
             if (intEntrada == 1) {
                 if(!flagArgs) {
-                    printf("Qual o nome do arquivo que sera gerado?");
+                    printf("Qual o nome do arquivo que sera gerado?\n>");
                     scanf("%s",strEntrada);
-                    printf("Quantos registros terao o arquivo?");
+                    printf("Quantos registros terao o arquivo?\n>");
                     scanf("%d",&Nregistros);
                 } else {
                     strcpy(strEntrada, argv[2]);
                     Nregistros = atoi(argv[3]);
-                    flagArgs = 0;
                 }
                 salvarTotalArquivos(Nregistros,strEntrada,0);           //O arquivo gerado � armazenado no totalarquivos.bin
                 tRegistro *pRegistro = calloc(Nregistros,sizeof(tRegistro));    //Um ponteiro � gerado para a quantidade de registros que ser� gerada.
                 gerarRegistros(Nregistros,pRegistro,strEntrada);
                 free(pRegistro);
             }
+
             if (intEntrada == 2) {
                 if (!flagArgs) {
-                    printf("Qual o nome do arquivo que sera lido?");
+                    printf("Qual o nome do arquivo que sera lido?\n>");
                     scanf("%s",strEntrada);
                 } else {
                     strcpy(strEntrada, argv[2]);
-                    flagArgs = 0;
                 }
                 printf("%d\n",lerTotalArquivos(strEntrada));
                 printarRegistros(lerTotalArquivos(strEntrada),strEntrada);
             }
+
             if (intEntrada == 3) {
                 if (!flagArgs) {
-                    printf("Qual o nome do arquivo que sera ordenado?");
+                    printf("Qual o nome do arquivo que sera ordenado?\n>");
                     scanf("%s",strEntrada);
                 } else {
                     strcpy(strEntrada, argv[2]);
-                    flagArgs = 0;
                 }
                 intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que ser� ordenado.
                 tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
@@ -1157,7 +1249,7 @@ int main (int argc, char *argv[]) {
 
                 qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
 
-                printf("Qual o nome do arquivo novo?");
+                printf("Qual o nome do arquivo novo?\n>");
                 scanf("%s",strEntrada);
                 gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);       //Grava o arquivo ordenado.
                 free(pRegistro);
@@ -1166,26 +1258,26 @@ int main (int argc, char *argv[]) {
                 printf("Arquivo de dados de entrada ordenado.\n");
                 printf("Arquivo gerado.\n");
             }
+
             if (intEntrada == 4) {
                 if (!flagArgs) {
-                    printf("Qual o nome do primeiro arquivo?");
+                    printf("Qual o nome do primeiro arquivo?\n>");
                     scanf("%s",strEntrada);
                 } else strcpy(strEntrada, argv[2]);
                 if(checarOrdenacao(strEntrada))     //checa se o arquivo 1 est� ordenado.
                 {
                     if (!flagArgs) {
-                        printf("Qual o nome do segundo arquivo?");
+                        printf("Qual o nome do segundo arquivo?\n>");
                         scanf("%s",strEntrada2);
                     } else strcpy(strEntrada2, argv[3]);
 
                     if(checarOrdenacao(strEntrada2))        //checa se o arquivo 2 est� ordenado.
                     {
                         if (!flagArgs) {
-                            printf("Qual o nome do arquivo gerado?");
+                            printf("Qual o nome do arquivo gerado?\n>");
                             scanf("%s",strEntrada3);
                         } else {
                             strcpy(strEntrada3, argv[4]);
-                            flagArgs = 0;
                         }
                         merging(strEntrada,strEntrada2,strEntrada3);        //Realiza o merging
                         salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
@@ -1201,25 +1293,25 @@ int main (int argc, char *argv[]) {
                     printf("Arquivo nao esta ordenado ou nao existe.\n");
                 }
             }
+
             if (intEntrada == 5) {
                 if (!flagArgs) {
-                    printf("Qual o nome do primeiro arquivo?");
+                    printf("Qual o nome do primeiro arquivo?\n>");
                     scanf("%s",strEntrada);
                 } else strcpy(strEntrada, argv[2]);
                 if(checarOrdenacao(strEntrada))  //checa se o arquivo 1 est� ordenado.
                 {
                     if (!flagArgs) {
-                        printf("Qual o nome do segundo arquivo?");
+                        printf("Qual o nome do segundo arquivo?\n>");
                         scanf("%s",strEntrada2);
                     } else strcpy(strEntrada2, argv[3]);
                     if(checarOrdenacao(strEntrada2))        //checa se o arquivo 2 est� ordenado.
                     {
                         if (!flagArgs) {
-                            printf("Qual o nome do arquivo gerado?");
+                            printf("Qual o nome do arquivo gerado?\n>");
                             scanf("%s",strEntrada3);
                         } else {
                             strcpy(strEntrada3, argv[4]);
-                            flagArgs = 0;
                         }
                         matching(strEntrada,strEntrada2,strEntrada3,contarRegistros(strEntrada),contarRegistros(strEntrada2));  //realiza o matching
                         salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
@@ -1235,20 +1327,34 @@ int main (int argc, char *argv[]) {
                     printf("Arquivo nao esta ordenado ou nao existe.\n");
                 }
             }
+
             if (intEntrada == 6) {
                 ARQUIVOS *arquivo;
                 if (!flagArgs) {
-                    printf("Digite os nomes dos arquivos\n");
+                    printf("Digite os nomes dos arquivos\n>");
                     nomeArquivos(&arquivo);
                     multiwaymerge(&arquivo);
                 } else {
                     nomeArquivosArgv(&arquivo, argc, argv);
-                    flagArgs = 0;
                 }
-                printf("BAtata_-1");
 
             }
-            if (intEntrada == 0) {
+
+            if (intEntrada == 7) {//(merge sort externo)
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo que sera ordenado?\n>");
+                    scanf("%s",strEntrada);
+                    printf("Qual o nome do arquivo novo?\n>");
+                    scanf("%s",strEntrada2);
+                } else {
+                    strcpy(strEntrada, argv[2]);
+                    strcpy(strEntrada2, argv[3]);
+                }
+                mergeSortExterno(strEntrada,strEntrada2);
+                salvarTotalArquivos(contarRegistros(strEntrada2),strEntrada2,1);
+            }
+
+            if ((intEntrada == 0) || (flagArgs)) {
                 flag = 0;
                 break;
             }
