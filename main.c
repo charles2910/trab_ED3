@@ -155,7 +155,6 @@ tRegistro *inicializarArqEmRAM (FILE *fp) {
 
 int printarRegistros(int numeroRegistros,char *nome)
 {
-    //numeroRegistros = 6000;
     if(numeroRegistros==0)
     {
         printf("Arquivo vazio.\n");
@@ -165,7 +164,6 @@ int printarRegistros(int numeroRegistros,char *nome)
     FILE *pArquivo;
     tRegistro *pReg;
     tRegistro regTMP;
-    //pReg=&regTMP;
 
     pArquivo=fopen(nome,"rb");
     if (pArquivo == NULL)
@@ -179,12 +177,9 @@ int printarRegistros(int numeroRegistros,char *nome)
     //Printa cada registro na tela char a char, eliminando o @
     for(int i = 0; i <= (int)(numeroRegistros/64); i++)
     {
-        //if(feof(pArquivo))
-        //    break;
         atualizarPaginaRAM(pReg, pArquivo);
         for(long int t = 0; t < 64; t++)
         {
-            //printf("%ld   %ld  %ld\n",pReg, (pReg + t*v), pReg+1);
             printf("%d   ",pReg[t].numero);
             for(int j=0;pReg[t].str1[j]!='@';j++)
             {
@@ -208,7 +203,6 @@ int printarRegistros(int numeroRegistros,char *nome)
             break;
     }
     printf("\n\n");
-    //fwrite(pReg, sizeof(pReg), 64, stdout);
     fclose(pArquivo);
     return 0;
 }
@@ -228,8 +222,6 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     exit(0);
     }
     fwrite("0",sizeof(char),1,pArquivo); // registro de cabe�alho
-    /*for (int k = 0; k < 4095; k++)
-        fwrite("@", sizeof(char), 1, pArquivo);*/
 
     pArquivoCidades=fopen("cities.txt","rb");
     if (pArquivoCidades == NULL)
@@ -996,10 +988,9 @@ int nomeArquivos(ARQUIVOS **parq) {
             strcpy(arq->arqSaida, arq->arqEntrada[l]);
         else {
             pString[l] = arq->arqEntrada[l];
-            printf("%d: %s\n", l, pString[l]);
         }
     }
-    printf("%s\n", arq->arqSaida);
+    arq->arqSaida[strlen(arq->arqSaida)-1] = '\0';
     free(arq->arqEntrada);
     arq->arqEntrada = pString;
     free(entrada);
@@ -1033,7 +1024,7 @@ void multiwaymerge(ARQUIVOS **pArq) {
     FILE **fp;
     tRegistro **paginas;
     NO_HEAP *arvoreMin;
-    int flag_fim = 0;
+    short int flag_fim = 0;
 
     pArquivos = *pArq;
     fp = calloc((pArquivos->numArq) + 1, sizeof(FILE *));
@@ -1049,7 +1040,7 @@ void multiwaymerge(ARQUIVOS **pArq) {
         arvoreMin[i].arqIndex = i;
     }
     fp[pArquivos->numArq] = fopen(pArquivos->arqSaida, "wb");
-
+    fwrite("0", sizeof(char), 1, fp[pArquivos->numArq]);
 
     while(flag_fim < pArquivos->numArq) {
         heapSort(arvoreMin, pArquivos->numArq);
@@ -1065,10 +1056,26 @@ void multiwaymerge(ARQUIVOS **pArq) {
         //att arvoreMin
         if (arvoreMin[0].index < 63) {
             arvoreMin[0].index += 1;
+            if (paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero == 0) {
+                arvoreMin[0].registro->numero = 2147483647;
+                flag_fim++;
+            } else
             arvoreMin[0].registro = &(paginas[arvoreMin[0].arqIndex][arvoreMin[0].index]);
+        } else {
+            atualizarPaginaRAM(paginas[arvoreMin[0].arqIndex], fp[arvoreMin[0].arqIndex]);
         }
     }
+    fseek(fp[pArquivos->numArq], 0, SEEK_SET);
+    fwrite("1", sizeof(char), 1, fp[pArquivos->numArq]);
 
+    for (int i = 0; i < pArquivos->numArq; i++) {
+        fclose(fp[i]);
+        free(paginas[i]);
+    }
+    fclose(fp[pArquivos->numArq]);
+    free(arvoreMin);
+    free(paginas);
+    free(fp);
 }
 
 void mergeSortExterno(char *nome,char *nomeSaida) {
