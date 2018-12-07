@@ -173,7 +173,7 @@ int printarRegistros(int numeroRegistros,char *nome)
     }
     long int v = 0;
     pReg = inicializarArqEmRAM(pArquivo);
-    printf("%ld\n", ftell(pArquivo));
+
     //Printa cada registro na tela char a char, eliminando o @
     for(int i = 0; i <= (int)(numeroRegistros/64); i++)
     {
@@ -202,7 +202,7 @@ int printarRegistros(int numeroRegistros,char *nome)
         if(v == numeroRegistros)
             break;
     }
-    printf("\n\n");
+    printf("\n");
     fclose(pArquivo);
     return 0;
 }
@@ -1238,8 +1238,13 @@ int main (int argc, char *argv[]) {
                 } else {
                     strcpy(strEntrada, argv[2]);
                 }
-                printf("%d\n",lerTotalArquivos(strEntrada));
-                printarRegistros(lerTotalArquivos(strEntrada),strEntrada);
+                int lerBin = 0, contar = 0;
+                contar = contarRegistros(strEntrada);
+                lerBin = lerTotalArquivos(strEntrada);
+                if (lerBin > 0)
+                    printarRegistros(lerBin,strEntrada);
+                else
+                    printarRegistros(contar, strEntrada);
             }
 
             if (intEntrada == 3) {
@@ -1249,15 +1254,19 @@ int main (int argc, char *argv[]) {
                 } else {
                     strcpy(strEntrada, argv[2]);
                 }
-                intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que ser� ordenado.
+                intEntrada=contarRegistros(strEntrada); //Conta quantos registros tem no arquivo que ser� ordenado.
                 tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
 
                 lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);     //Le o arquivo para a RAM
 
                 qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
 
-                printf("Qual o nome do arquivo novo?\n>");
-                scanf("%s",strEntrada);
+                if (!flagArgs){
+                    printf("Qual o nome do arquivo novo?\n>");
+                    scanf("%s",strEntrada);
+                } else {
+                    strcpy(strEntrada, argv[3]);
+                }
                 gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);       //Grava o arquivo ordenado.
                 free(pRegistro);
 
@@ -1271,34 +1280,38 @@ int main (int argc, char *argv[]) {
                     printf("Qual o nome do primeiro arquivo?\n>");
                     scanf("%s",strEntrada);
                 } else strcpy(strEntrada, argv[2]);
-                if(checarOrdenacao(strEntrada))     //checa se o arquivo 1 est� ordenado.
+                if(!checarOrdenacao(strEntrada))  //checa se o arquivo 1 est� ordenado, se nao soubermos, ordena ele
                 {
-                    if (!flagArgs) {
-                        printf("Qual o nome do segundo arquivo?\n>");
-                        scanf("%s",strEntrada2);
-                    } else strcpy(strEntrada2, argv[3]);
+                    intEntrada=contarRegistros(strEntrada); //Conta quantos registros tem no arquivo que ser� ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
 
-                    if(checarOrdenacao(strEntrada2))        //checa se o arquivo 2 est� ordenado.
-                    {
-                        if (!flagArgs) {
-                            printf("Qual o nome do arquivo gerado?\n>");
-                            scanf("%s",strEntrada3);
-                        } else {
-                            strcpy(strEntrada3, argv[4]);
-                        }
-                        merging(strEntrada,strEntrada2,strEntrada3);        //Realiza o merging
-                        salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
-                        printf("Arquivo gerado.\n");
-                    }
-                    else
-                    {
-                        printf("Arquivo nao esta ordenado ou nao existe.\n");
-                    }
+                    lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);       //Grava o arquivo ordenado.
                 }
-                else
+                if (!flagArgs) {
+                    printf("Qual o nome do segundo arquivo?\n>");
+                    scanf("%s",strEntrada2);
+                } else strcpy(strEntrada2, argv[3]);
+
+                if(!checarOrdenacao(strEntrada2))        //checa se o arquivo 2 est� ordenado, se nao soubermos, ordena ele
                 {
-                    printf("Arquivo nao esta ordenado ou nao existe.\n");
+                    intEntrada=contarRegistros(strEntrada2); //Conta quantos registros tem no arquivo que ser� ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
+
+                    lerArquivoParaRAM(pRegistro,strEntrada2,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada2,intEntrada);       //Grava o arquivo ordenado.
                 }
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo gerado?\n>");
+                    scanf("%s",strEntrada3);
+                } else {
+                    strcpy(strEntrada3, argv[4]);
+                }
+                merging(strEntrada,strEntrada2,strEntrada3);        //Realiza o merging
+                salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
+                printf("Arquivo gerado.\n");
             }
 
             if (intEntrada == 5) {
@@ -1306,33 +1319,38 @@ int main (int argc, char *argv[]) {
                     printf("Qual o nome do primeiro arquivo?\n>");
                     scanf("%s",strEntrada);
                 } else strcpy(strEntrada, argv[2]);
-                if(checarOrdenacao(strEntrada))  //checa se o arquivo 1 est� ordenado.
+                if(!checarOrdenacao(strEntrada))  //checa se o arquivo 1 est� ordenado, se nao soubermos, ordena ele
                 {
-                    if (!flagArgs) {
-                        printf("Qual o nome do segundo arquivo?\n>");
-                        scanf("%s",strEntrada2);
-                    } else strcpy(strEntrada2, argv[3]);
-                    if(checarOrdenacao(strEntrada2))        //checa se o arquivo 2 est� ordenado.
-                    {
-                        if (!flagArgs) {
-                            printf("Qual o nome do arquivo gerado?\n>");
-                            scanf("%s",strEntrada3);
-                        } else {
-                            strcpy(strEntrada3, argv[4]);
-                        }
-                        matching(strEntrada,strEntrada2,strEntrada3,contarRegistros(strEntrada),contarRegistros(strEntrada2));  //realiza o matching
-                        salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
-                        printf("Arquivo gerado.\n");
-                    }
-                    else
-                    {
-                        printf("Arquivo nao esta ordenado ou nao existe.\n");
-                    }
+                    intEntrada=contarRegistros(strEntrada); //Conta quantos registros tem no arquivo que ser� ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
+
+                    lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);       //Grava o arquivo ordenado.
                 }
-                else
+                if (!flagArgs) {
+                    printf("Qual o nome do segundo arquivo?\n>");
+                    scanf("%s",strEntrada2);
+                } else strcpy(strEntrada2, argv[3]);
+                if(!checarOrdenacao(strEntrada2))        //checa se o arquivo 2 est� ordenado, se nao soubermos, ordena ele
                 {
-                    printf("Arquivo nao esta ordenado ou nao existe.\n");
+                    intEntrada=contarRegistros(strEntrada2); //Conta quantos registros tem no arquivo que ser� ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
+
+                    lerArquivoParaRAM(pRegistro,strEntrada2,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada2,intEntrada);       //Grava o arquivo ordenado.
                 }
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo gerado?\n>");
+                    scanf("%s",strEntrada3);
+                } else {
+                    strcpy(strEntrada3, argv[4]);
+                }
+                matching(strEntrada,strEntrada2,strEntrada3,contarRegistros(strEntrada),contarRegistros(strEntrada2));  //realiza o matching
+                salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
+                printf("Arquivo gerado.\n");
+
             }
 
             if (intEntrada == 6) {
