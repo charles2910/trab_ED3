@@ -1204,7 +1204,7 @@ int main (int argc, char *argv[]) {
 
         while (intEntrada != 0)
         {
-            int intEntrada = 9;
+            int intEntrada = 8;
             if ((argc > 1) && (flagArgs)) {
                 intEntrada = atoi(argv[1]);
             }
@@ -1273,6 +1273,7 @@ int main (int argc, char *argv[]) {
                 salvarTotalArquivos(intEntrada,strEntrada,1);           //salva o arquivo gerado no totalarquivos.bin
                 printf("Arquivo de dados de entrada ordenado.\n");
                 printf("Arquivo gerado.\n");
+                intEntrada = 8;
             }
 
             if (intEntrada == 4) {
