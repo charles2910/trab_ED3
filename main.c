@@ -381,7 +381,7 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     min=0;
 	max=50000;
 	tam = max-min+1;
-	int *vetorRepC1=calloc(numeroRegistros,sizeof(int));
+	int *vetorRepC1= (int *)calloc(numeroRegistros,sizeof(int));
 	v = (int *) calloc(max-min+1, sizeof(int));
 	for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.3, numeroRegistros));
@@ -399,10 +399,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     if (ArqRep == NULL){printf("Falha no processamento.\n");
     exit(0);}
     min=0;
-	max=20577;
+	max=20500;
     tam = max-min+1;
     rep=0;
-    int *vetorRepC2=calloc(numeroRegistros,sizeof(int));
+    int *vetorRepC2=(int *)calloc(numeroRegistros,sizeof(int));
     v = (int *) calloc(max-min+1, sizeof(int));
     for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.25, numeroRegistros));
@@ -420,10 +420,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     if (ArqRep == NULL){printf("Falha no processamento.\n");
     exit(0);}
     min=0;
-	max=6243;
+	max=6200;
     tam = max-min+1;
     rep=0;
-    int *vetorRepC3=calloc(numeroRegistros,sizeof(int));
+    int *vetorRepC3= (int *) calloc(numeroRegistros,sizeof(int));
     v = (int *) calloc(max-min+1, sizeof(int));
     for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.20, numeroRegistros));
@@ -441,10 +441,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     if (ArqRep == NULL){printf("Falha no processamento.\n");
     exit(0);}
     min=0;
-	max=7812;
+	max=7800;
     tam = max-min+1;
     rep=0;
-    int *vetorRepC4=calloc(numeroRegistros,sizeof(int));
+    int *vetorRepC4= (int *) calloc(numeroRegistros,sizeof(int));
     v = (int *) calloc(max-min+1, sizeof(int));
     for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.15, numeroRegistros));
@@ -488,7 +488,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     //Com o valor dos vetores de números repetidos, buscamos o respectivo conteúdo de acordo com as linhas que representam um índice primário.
 
     //geraçao do vetor de cidades para o Campo 2:
-    char vetorCidades[20578][30];  //linhas: 0 a 20577
+    char ** vetorCidades = (char**) calloc (20578, sizeof(char *));
+    for (int t = 0; t < 20578; t++) {
+        vetorCidades[t] = (char*) malloc(30*sizeof(char));
+    }  //linhas: 0 a 20577
     for(int i=0;i<20578;i++) {
         fgets(vetorCidades[i],30,pArquivoCidades);
         for(int j=0;j<30;j++)
@@ -501,7 +504,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
         }
     }
     //geraçao do vetor de nomes para o Campo 3:
-    char vetorNomes[6244][20];  //0 a 6243
+    char **vetorNomes = (char**) calloc (6244, sizeof(char *));
+    for (int t = 0; t < 6244; t++) {
+        vetorNomes[t] = (char*) malloc(20*sizeof(char));
+    }  //0 a 6243
     for(int i=0;i<6244;i++) {
         fgets(vetorNomes[i],20,pArquivoNomes);
         for(int j=0;j<20;j++)
@@ -515,7 +521,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     }
 
     //geraçao do vetor de datas para o Campo 4:
-    char vetorDatas[7812][20];
+    char ** vetorDatas  = (char**) calloc (7812, sizeof(char *));
+    for (int t = 0; t < 7812; t++) {
+        vetorDatas[t] = (char*) malloc(20*sizeof(char));
+    }
     for(int i=0;i<7812;i++) {
         fgets(vetorDatas[i],20,pArquivoDatas);
         for(int j=0;j<20;j++)
@@ -534,6 +543,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     for(int i=0;i<numeroRegistros;i++)
     {
         pReg->numero=vetorRepC1[i];
+        int v2,v3,v4;
+        v2 = vetorRepC2[i];
+        v3 = vetorRepC3[i];
+        v4 = vetorRepC4[i];
         memcpy(pReg->str1,vetorCidades[vetorRepC2[i]],30);
         memcpy(pReg->str2,vetorNomes[vetorRepC3[i]],20);
         memcpy(pReg->data,vetorDatas[vetorRepC4[i]],10);
