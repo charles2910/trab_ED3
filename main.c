@@ -180,7 +180,7 @@ void coletorLixo(tRegistro *registro)   //remove os espacos vazios nos campos, a
 {
     for(int i=0;i<c2;i++)       //loop que varia at� o tamanho do campo 2(30bytes)
    {
-       if((*registro).str1[i]=='\0')    //quando acha o \0, todos os caracteres seguintes s�o substituidos por @
+       if((*registro).str1[i]=='\r')    //quando acha o \0, todos os caracteres seguintes s�o substituidos por @
        {
            (*registro).str1[i]='@';
            for(i+1;i<c2;i++)
@@ -199,7 +199,7 @@ void coletorLixo(tRegistro *registro)   //remove os espacos vazios nos campos, a
 
    for(int i=0;i<c3;i++)        //mesma l�gica, s� que o loop varia ate o tamanho do campo 3(20 bytes)
    {
-       if((*registro).str2[i]=='\0')
+       if((*registro).str2[i]=='\r')
        {
            (*registro).str2[i]='@';
            for(i+1;i<c3;i++)
@@ -381,7 +381,7 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     min=0;
 	max=50000;
 	tam = max-min+1;
-	int *vetorRepC1=calloc(numeroRegistros,sizeof(int));
+	int *vetorRepC1= (int *)calloc(numeroRegistros,sizeof(int));
 	v = (int *) calloc(max-min+1, sizeof(int));
 	for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.3, numeroRegistros));
@@ -399,10 +399,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     if (ArqRep == NULL){printf("Falha no processamento.\n");
     exit(0);}
     min=0;
-	max=20577;
+	max=20500;
     tam = max-min+1;
     rep=0;
-    int *vetorRepC2=calloc(numeroRegistros,sizeof(int));
+    int *vetorRepC2=(int *)calloc(numeroRegistros,sizeof(int));
     v = (int *) calloc(max-min+1, sizeof(int));
     for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.25, numeroRegistros));
@@ -420,10 +420,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     if (ArqRep == NULL){printf("Falha no processamento.\n");
     exit(0);}
     min=0;
-	max=6243;
+	max=6200;
     tam = max-min+1;
     rep=0;
-    int *vetorRepC3=calloc(numeroRegistros,sizeof(int));
+    int *vetorRepC3= (int *) calloc(numeroRegistros,sizeof(int));
     v = (int *) calloc(max-min+1, sizeof(int));
     for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.20, numeroRegistros));
@@ -441,10 +441,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     if (ArqRep == NULL){printf("Falha no processamento.\n");
     exit(0);}
     min=0;
-	max=7812;
+	max=7800;
     tam = max-min+1;
     rep=0;
-    int *vetorRepC4=calloc(numeroRegistros,sizeof(int));
+    int *vetorRepC4= (int *) calloc(numeroRegistros,sizeof(int));
     v = (int *) calloc(max-min+1, sizeof(int));
     for(int i = 0; i < numeroRegistros; i++) {
 		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.15, numeroRegistros));
@@ -488,7 +488,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     //Com o valor dos vetores de números repetidos, buscamos o respectivo conteúdo de acordo com as linhas que representam um índice primário.
 
     //geraçao do vetor de cidades para o Campo 2:
-    char vetorCidades[20578][30];  //linhas: 0 a 20577
+    char ** vetorCidades = (char**) calloc (20578, sizeof(char *));
+    for (int t = 0; t < 20578; t++) {
+        vetorCidades[t] = (char*) malloc(30*sizeof(char));
+    }  //linhas: 0 a 20577
     for(int i=0;i<20578;i++) {
         fgets(vetorCidades[i],30,pArquivoCidades);
         for(int j=0;j<30;j++)
@@ -501,7 +504,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
         }
     }
     //geraçao do vetor de nomes para o Campo 3:
-    char vetorNomes[6244][20];  //0 a 6243
+    char **vetorNomes = (char**) calloc (6244, sizeof(char *));
+    for (int t = 0; t < 6244; t++) {
+        vetorNomes[t] = (char*) malloc(20*sizeof(char));
+    }  //0 a 6243
     for(int i=0;i<6244;i++) {
         fgets(vetorNomes[i],20,pArquivoNomes);
         for(int j=0;j<20;j++)
@@ -515,7 +521,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     }
 
     //geraçao do vetor de datas para o Campo 4:
-    char vetorDatas[7812][20];
+    char ** vetorDatas  = (char**) calloc (7812, sizeof(char *));
+    for (int t = 0; t < 7812; t++) {
+        vetorDatas[t] = (char*) malloc(20*sizeof(char));
+    }
     for(int i=0;i<7812;i++) {
         fgets(vetorDatas[i],20,pArquivoDatas);
         for(int j=0;j<20;j++)
@@ -534,6 +543,10 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     for(int i=0;i<numeroRegistros;i++)
     {
         pReg->numero=vetorRepC1[i];
+        int v2,v3,v4;
+        v2 = vetorRepC2[i];
+        v3 = vetorRepC3[i];
+        v4 = vetorRepC4[i];
         memcpy(pReg->str1,vetorCidades[vetorRepC2[i]],30);
         memcpy(pReg->str2,vetorNomes[vetorRepC3[i]],20);
         memcpy(pReg->data,vetorDatas[vetorRepC4[i]],10);
@@ -1199,7 +1212,7 @@ int nomeArquivos(ARQUIVOS **parq) {
     return 0;
 }
 
-int nomeArquivosArgv(ARQUIVOS **parq, int argc, char *argv[]) {
+void nomeArquivosArgv(ARQUIVOS **parq, int argc, char *argv[]) {
     ARQUIVOS *arq;
 
     arq = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
@@ -1260,13 +1273,18 @@ void multiwaymerge(ARQUIVOS **pArq) {
         //att arvoreMin
         if (arvoreMin[0].index < 63) {
             arvoreMin[0].index += 1;
-            if (paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero == 0) {
+            if ((paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero == 0) || (paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero < paginas[arvoreMin[0].arqIndex][arvoreMin[0].index - 1].numero)) {
                 arvoreMin[0].registro->numero = 2147483647;
                 flag_fim++;
             } else
             arvoreMin[0].registro = &(paginas[arvoreMin[0].arqIndex][arvoreMin[0].index]);
         } else {
-            atualizarPaginaRAM(paginas[arvoreMin[0].arqIndex], fp[arvoreMin[0].arqIndex]);
+            if(!atualizarPaginaRAM(paginas[arvoreMin[0].arqIndex], fp[arvoreMin[0].arqIndex])) {
+                arvoreMin[0].registro->numero = 2147483647;
+                flag_fim++;
+            };
+            arvoreMin[0].index = 0;
+            arvoreMin[0].registro = &(paginas[arvoreMin[0].arqIndex][arvoreMin[0].index]);
         }
     }
     fseek(fp[pArquivos->numArq], 0, SEEK_SET);
@@ -1344,6 +1362,7 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
             pSubarquivo=fopen(subarquivos[i],"wb");
             fread(buffer,sizeof(tRegistro),1000,pArquivoEntrada); //le o arquivo de entrada.
             qsort(buffer, 1000, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite("1", 1, sizeof(char), pSubarquivo);
             fwrite(buffer,sizeof(tRegistro),1000,pSubarquivo); //escreve no subarquivo.
             fclose(pSubarquivo);
         }
@@ -1354,6 +1373,7 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
             pSubarquivo=fopen(subarquivos[i],"wb");
             fread(buffer,sizeof(tRegistro),restoSubArquivo,pArquivoEntrada); //le o arquivo de entrada.
             qsort(buffer, restoSubArquivo, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite("1", 1, sizeof(char), pSubarquivo);
             fwrite(buffer,sizeof(tRegistro),restoSubArquivo,pSubarquivo); //escreve no subarquivo.
             fclose(pSubarquivo);
         }
@@ -1363,7 +1383,16 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
         Multiway merge nos subarquivos para gerar o arquivo de saida ordenado.
         */
 
+        ARQUIVOS *multiway = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
+        multiway->arqEntrada = (char **) calloc(qtdDeSubarquivos, sizeof(char *));
+        for (int i = 0; i < qtdDeSubarquivos; i++){
+            multiway->arqEntrada[i] = (char *) malloc(strlen(subarquivos[i]) + 1);
+            strcpy(multiway->arqEntrada[i], subarquivos[i]);
+        }
+        strcpy(multiway->arqSaida, nomeSaida);
+        multiway->numArq = qtdDeSubarquivos;
 
+        multiwaymerge(&multiway);
     }
 
     printf("Arquivo gerado.\n");
@@ -1378,12 +1407,10 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
 int main (int argc, char *argv[]) {
 
     FILE *pf, *pTotalArquivos;
-    //ARQUIVOS *parquivinho;
 
     char strEntrada[30];
     char strEntrada2[30];
     char strEntrada3[30];
-    char strEntradaK[30][30];
 
     int flag = 1, flagArgs = 1;
     int intEntrada = 9;
@@ -1415,7 +1442,6 @@ int main (int argc, char *argv[]) {
             else {
 
                 printf("Digite a opcao a ser executada:\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/6-multiway merging/7-sort merge externo/0-sair?\n\n>");
-
                 scanf("%d",&intEntrada);
                 getchar();
                 flagArgs = 0;
@@ -1427,6 +1453,7 @@ int main (int argc, char *argv[]) {
                     scanf("%s",strEntrada);
                     printf("Quantos registros terao o arquivo?\n>");
                     scanf("%d",&Nregistros);
+                    getchar();
                 } else {
                     strcpy(strEntrada, argv[2]);
                     Nregistros = atoi(argv[3]);
@@ -1565,11 +1592,11 @@ int main (int argc, char *argv[]) {
                 if (!flagArgs) {
                     printf("Digite os nomes dos arquivos\n>");
                     nomeArquivos(&arquivo);
-                    multiwaymerge(&arquivo);
                 } else {
                     nomeArquivosArgv(&arquivo, argc, argv);
                 }
-
+                multiwaymerge(&arquivo);
+                printf("Arquivo gerado.\n");
             }
 
             if (intEntrada == 7) {//(merge sort externo)
@@ -1584,18 +1611,13 @@ int main (int argc, char *argv[]) {
                 }
                 mergeSortExterno(strEntrada,strEntrada2);
                 salvarTotalArquivos(contarRegistros(strEntrada2),strEntrada2,1);
+                printf("Arquivo gerado.\n");
             }
 
             if ((intEntrada == 0) || (flagArgs)) {
                 flag = 0;
                 break;
             }
-
-            if (intEntrada == 9) {
-                scanf("%s",strEntrada);
-                printf("%d",contarRegistros(strEntrada));
-            }
-
         }
     }
    return(0);
