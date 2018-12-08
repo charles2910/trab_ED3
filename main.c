@@ -1212,7 +1212,7 @@ int nomeArquivos(ARQUIVOS **parq) {
     return 0;
 }
 
-int nomeArquivosArgv(ARQUIVOS **parq, int argc, char *argv[]) {
+void nomeArquivosArgv(ARQUIVOS **parq, int argc, char *argv[]) {
     ARQUIVOS *arq;
 
     arq = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
@@ -1407,12 +1407,10 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
 int main (int argc, char *argv[]) {
 
     FILE *pf, *pTotalArquivos;
-    //ARQUIVOS *parquivinho;
 
     char strEntrada[30];
     char strEntrada2[30];
     char strEntrada3[30];
-    char strEntradaK[30][30];
 
     int flag = 1, flagArgs = 1;
     int intEntrada = 9;
@@ -1444,7 +1442,6 @@ int main (int argc, char *argv[]) {
             else {
 
                 printf("Digite a opcao a ser executada:\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/6-multiway merging/7-sort merge externo/0-sair?\n\n>");
-
                 scanf("%d",&intEntrada);
                 getchar();
                 flagArgs = 0;
@@ -1456,6 +1453,7 @@ int main (int argc, char *argv[]) {
                     scanf("%s",strEntrada);
                     printf("Quantos registros terao o arquivo?\n>");
                     scanf("%d",&Nregistros);
+                    getchar();
                 } else {
                     strcpy(strEntrada, argv[2]);
                     Nregistros = atoi(argv[3]);
@@ -1594,12 +1592,11 @@ int main (int argc, char *argv[]) {
                 if (!flagArgs) {
                     printf("Digite os nomes dos arquivos\n>");
                     nomeArquivos(&arquivo);
-                    multiwaymerge(&arquivo);
                 } else {
                     nomeArquivosArgv(&arquivo, argc, argv);
-                    multiwaymerge(&arquivo);
                 }
-                printf("Arquivo Gerado\n");
+                multiwaymerge(&arquivo);
+                printf("Arquivo gerado.\n");
             }
 
             if (intEntrada == 7) {//(merge sort externo)
@@ -1614,18 +1611,13 @@ int main (int argc, char *argv[]) {
                 }
                 mergeSortExterno(strEntrada,strEntrada2);
                 salvarTotalArquivos(contarRegistros(strEntrada2),strEntrada2,1);
+                printf("Arquivo gerado.\n");
             }
 
             if ((intEntrada == 0) || (flagArgs)) {
                 flag = 0;
                 break;
             }
-
-            if (intEntrada == 9) {
-                scanf("%s",strEntrada);
-                printf("%d",contarRegistros(strEntrada));
-            }
-
         }
     }
    return(0);
