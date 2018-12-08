@@ -4,6 +4,8 @@
 #include <time.h>
 #include <ctype.h>
 
+#define	tol	0.001	// tolerancia da porcentagem de repeticoes
+
 //Tamanho dos registros constante 64 bytes
 #define c1 4
 #define c2 30
@@ -13,7 +15,7 @@
 //SIZE_OF registro == 64 bytes
 //Numero de registros por paginas de disco == 64
 
-/*Definição dos registros de tamanho fixo e campos de tamanho fixo.
+/*Definiï¿½ï¿½o dos registros de tamanho fixo e campos de tamanho fixo.
 inteiro de 4 bytes numero.
 string de 30 bytes str1.
 string de 20 bytes str2.
@@ -25,11 +27,11 @@ typedef struct{
     char data[10];
 } tRegistro;
 
-/*Definição de uma struct auxiliar que guarda informações dos arquivos gerados durante a
-execução do programa.
+/*Definiï¿½ï¿½o de uma struct auxiliar que guarda informaï¿½ï¿½es dos arquivos gerados durante a
+execuï¿½ï¿½o do programa.
 string de 30 bytes para guardar o nome do arquivo criado.
 inteiro que guarda o numero de registros guardados em determinado arquivo gerado.
-inteiro que guarda se o arquivo está ou não ordenado. */
+inteiro que guarda se o arquivo estï¿½ ou nï¿½o ordenado. */
 typedef struct{
     char nomeArquivo[30];
     int numeroRegistros;
@@ -50,8 +52,8 @@ typedef struct {
 
 typedef struct noHeap {
     tRegistro * registro;
-    struct noHeap * filhoDir;
-    struct noHeap * filhoEsq;
+    int index;
+    int arqIndex;
 } NO_HEAP;
 
 void swap (NO_HEAP vetor[], int i, int j) {
@@ -88,15 +90,15 @@ void heapSort(NO_HEAP arr[], int n)
     }
 }
 
-/* Função que remove os caracteres que contem lixo(espaços que sobraram dentro das strings de campo) adicionando o
-caractere @ a partir do \0 (final da string). Espaços em branco são substituidos por _ para facilitar a visualização
+/* Funï¿½ï¿½o que remove os caracteres que contem lixo(espaï¿½os que sobraram dentro das strings de campo) adicionando o
+caractere @ a partir do \0 (final da string). Espaï¿½os em branco sï¿½o substituidos por _ para facilitar a visualizaï¿½ï¿½o
 do campo. */
-//Como parâmetro é passado um ponteiro para um registro que está na RAM.
+//Como parï¿½metro ï¿½ passado um ponteiro para um registro que estï¿½ na RAM.
 void coletorLixo(tRegistro *registro)   //remove os espacos vazios nos campos, adicionando @ a eles.
 {
-    for(int i=0;i<c2;i++)       //loop que varia até o tamanho do campo 2(30bytes)
+    for(int i=0;i<c2;i++)       //loop que varia atï¿½ o tamanho do campo 2(30bytes)
    {
-       if((*registro).str1[i]=='\0')    //quando acha o \0, todos os caracteres seguintes são substituidos por @
+       if((*registro).str1[i]=='\0')    //quando acha o \0, todos os caracteres seguintes sï¿½o substituidos por @
        {
            (*registro).str1[i]='@';
            for(i+1;i<c2;i++)
@@ -106,14 +108,14 @@ void coletorLixo(tRegistro *registro)   //remove os espacos vazios nos campos, a
        }
        else
        {
-           if((*registro).str1[i]==' ') // Quando acha um espaço em branco, este é substituido por _
+           if((*registro).str1[i]==' ') // Quando acha um espaï¿½o em branco, este ï¿½ substituido por _
            {
                (*registro).str1[i]='_';
            }
        }
    }
 
-   for(int i=0;i<c3;i++)        //mesma lógica, só que o loop varia ate o tamanho do campo 3(20 bytes)
+   for(int i=0;i<c3;i++)        //mesma lï¿½gica, sï¿½ que o loop varia ate o tamanho do campo 3(20 bytes)
    {
        if((*registro).str2[i]=='\0')
        {
@@ -144,7 +146,7 @@ tRegistro *inicializarArqEmRAM (FILE *fp) {
     tRegistro *novaPag;
 
     if (ftell(fp) == 0)
-        fseek(fp, 4096, ftell(fp));
+        fseek(fp, 1, ftell(fp));
     else {
         printf("ERRO em inicializarArqEmRAM: Stream pointer not in 0.\n");
         return NULL;
@@ -155,7 +157,6 @@ tRegistro *inicializarArqEmRAM (FILE *fp) {
 
 int printarRegistros(int numeroRegistros,char *nome)
 {
-    //numeroRegistros = 6000;
     if(numeroRegistros==0)
     {
         printf("Arquivo vazio.\n");
@@ -165,7 +166,6 @@ int printarRegistros(int numeroRegistros,char *nome)
     FILE *pArquivo;
     tRegistro *pReg;
     tRegistro regTMP;
-    //pReg=&regTMP;
 
     pArquivo=fopen(nome,"rb");
     if (pArquivo == NULL)
@@ -175,16 +175,13 @@ int printarRegistros(int numeroRegistros,char *nome)
     }
     long int v = 0;
     pReg = inicializarArqEmRAM(pArquivo);
-    printf("%ld\n", ftell(pArquivo));
+
     //Printa cada registro na tela char a char, eliminando o @
     for(int i = 0; i <= (int)(numeroRegistros/64); i++)
     {
-        //if(feof(pArquivo))
-        //    break;
         atualizarPaginaRAM(pReg, pArquivo);
         for(long int t = 0; t < 64; t++)
         {
-            //printf("%ld   %ld  %ld\n",pReg, (pReg + t*v), pReg+1);
             printf("%d   ",pReg[t].numero);
             for(int j=0;pReg[t].str1[j]!='@';j++)
             {
@@ -207,159 +204,256 @@ int printarRegistros(int numeroRegistros,char *nome)
         if(v == numeroRegistros)
             break;
     }
-    printf("\n\n");
-    fwrite(pReg, sizeof(pReg), 64, stdout);
+    printf("\n");
     fclose(pArquivo);
     return 0;
 }
 
 
+//FUNCOES DA REPETICAO
+// Calcula a quantidade de numeros aleatarios gerados para poder fazer o controle de porcentagem de recepeticao
+// Apenas soma todas as posicoes do vetor de controle de repeticaes
+int calcula_gerados(int *v, int tam) {
+	//printf("log: calcula_gerados: inicio\n");
+	int i, cont = 0;
+	for(i = 0; i < tam; i++)
+		cont += v[i];
+	return cont;
+}
+
+// Calcula a nova porcentagem de repeticao apos a geracao de um novo valor aleatorio
+// Mesma coisa que a funcao calcula_gerados, porem faz a implementacao de novos valores e da a porcentagem atualizada de numeros gerados
+void calcula_rep(int *v, int min, int max, int valor, double *rep, int n) {
+	if(v[valor-min] == 2) *rep += 2.0/n;
+	else if(v[valor-min] > 2) *rep += 1.0/n;
+
+}
+
+// Gera um novo valor aleatorio de acordo com o estado do vetor de controle
+// Gera o novo valor de tres formas diferentes:
+//	estado 1: forca a parada de geracao de valor aleatorios
+//	estado 2: forca a geracao de valor aleatorios
+//	estado 3: gera qualquer valor aleatorio
+int controla_rep(int *v, int min, int max, int estado) {
+	int n = max-min+1;
+	int valor, sair = 0;
+	while(!sair) {
+		valor = (rand()%n)+min;
+		if((v[valor-min] == 0 && estado == 1) || (v[valor-min] >= 1 && estado == 2) || (estado == 3))
+			sair = 1;
+	}
+	return valor;
+}
+
+// Funcao que verifica qual eh o estado do vetor e retorna o valor gerado
+int gera_valor(int *v, int min, int max, double rep, double maxRep, int n) {
+	//printf("log: gera_valor: inicio\n");
+	int valor, tam = max-min+1;
+	double gerados = (double) calcula_gerados(v, tam)/n;
+	if(rep >= maxRep-tol) {
+		// Se a taxa de repeticao e maior do que a taxa maxima de repeticao menos a tolerancia a funcao para de gerar numeros repetidos
+		valor = controla_rep(v, min, max, 1);
+	} else if(gerados > 0.1 && 4*n*(maxRep-tol-rep) >= n*(1-gerados)) {
+		// Se ja foram gerados mais de 10% do total de numeros aleatorios...
+		// E se 'gerados'(acima) for maior que a porcentagem de numeros que ainda precisam ser gerados
+		// (isso e um parametro que julguei bom, pq se estiverem faltando muitos numeros repetidos para se gerar,
+		// mas faltam poucos numeros a serem gerados, e necessario forcar a repeticao)
+		// forca a geracao de numeros aleatorios
+		valor = controla_rep(v, min, max, 2);
+	} else {
+		// Caso contrÃƒÂ¡rio...
+		// gera qualquer numero aleatorio
+		valor = controla_rep(v, min, max, 3);
+	}
+	return valor;
+}
+
+//Retorna o valor final aleatorio
+int insere_valor(int *v, int min, int max, double *rep, double maxRep, int n) {
+	int valor = gera_valor(v, min, max, *rep, maxRep, n);
+	v[valor-min]++;
+	calcula_rep(v, min, max, valor, &(*rep), n);
+	return valor;
+}
+//Funcao que gera os registros.
+//Parametros: numero de registros, ponteiro para registro, nome do arquivo
 void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
 {
     FILE *pArquivo;
     FILE *pArquivoCidades;
     FILE *pArquivoNomes;
-    int intRandom;
+    FILE *pArquivoDatas;
 
+    //Gerar vetores(vetorRepC1, vetorRepC2, vetorRepC3, vetorRepC4) que contÃ©m nÃºmeros com as respectivas repetiÃ§Ãµes(0.3, 0.25, 0.2, 0.15)
+    int min, max;
+	int *v = NULL;
+	double maxRep, rep = 0;
+	int tam;
+
+	//Os valores gerados sÃ£o escritos num arquivo arqRep.txt e posteriormente passados aos vetores.
+	//Campo1
+    FILE *ArqRep;
+    ArqRep = fopen("arqRep.txt", "w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=50000;
+	tam = max-min+1;
+	int *vetorRepC1=calloc(numeroRegistros,sizeof(int));
+	v = (int *) calloc(max-min+1, sizeof(int));
+	for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.3, numeroRegistros));
+	}
+    free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC1[k]);
+    }
+    fclose(ArqRep);
+
+    //Campo2
+    ArqRep = fopen("arqRep.txt","w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=20577;
+    tam = max-min+1;
+    rep=0;
+    int *vetorRepC2=calloc(numeroRegistros,sizeof(int));
+    v = (int *) calloc(max-min+1, sizeof(int));
+    for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.25, numeroRegistros));
+	}
+	free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC2[k]);
+    }
+    fclose(ArqRep);
+
+    //Campo3
+    ArqRep = fopen("arqRep.txt","w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=6243;
+    tam = max-min+1;
+    rep=0;
+    int *vetorRepC3=calloc(numeroRegistros,sizeof(int));
+    v = (int *) calloc(max-min+1, sizeof(int));
+    for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.20, numeroRegistros));
+	}
+	free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC3[k]);
+    }
+    fclose(ArqRep);
+
+    //Campo4
+    ArqRep = fopen("arqRep.txt","w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=7812;
+    tam = max-min+1;
+    rep=0;
+    int *vetorRepC4=calloc(numeroRegistros,sizeof(int));
+    v = (int *) calloc(max-min+1, sizeof(int));
+    for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.15, numeroRegistros));
+	}
+	free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC4[k]);
+    }
+    fclose(ArqRep);
+    //Vetores de nÃºmeros com repetiÃ§Ã£o gerados.
+
+    //Abertura do arquivo para escrita, abertura dos arquivos cities.txt, names.txt e datas.txt para leitura.
     pArquivo=fopen(nome,"wb");
     if (pArquivo == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
-    fwrite("0",sizeof(char),1,pArquivo); // registro de cabeçalho
-    for (int k = 0; k < 4095; k++)
-        fwrite("@", sizeof(char), 1, pArquivo);
+    fwrite("0",sizeof(char),1,pArquivo); // registro de cabeÃ§alho
 
-    pArquivoCidades=fopen("cities.txt","rb");
-    if (pArquivoCidades == NULL)
-    {
+    pArquivoCidades=fopen("cities.txt","r");
+    if (pArquivoCidades == NULL){
         printf("Falha no processamento.\n");
-        exit(0);
+        exit(0);}
+
+    pArquivoNomes=fopen("names.txt","r");
+    if (pArquivoNomes == NULL){
+        printf("Falha no processamento.\n");
+        exit(0);}
+
+    pArquivoDatas=fopen("datas.txt","r");
+    if (pArquivoDatas == NULL){
+        printf("Falha no processamento.\n");
+        exit(0);}
+
+    //O conteÃºdo dos arquivos lidos Ã© passado para vetores de strings(matrizes de linhas que representam um Ã­ndice e colunas com os respectivos caracteres).
+    //Com o valor dos vetores de nÃºmeros repetidos, buscamos o respectivo conteÃºdo de acordo com as linhas que representam um Ã­ndice primÃ¡rio.
+
+    //geraÃ§ao do vetor de cidades para o Campo 2:
+    char vetorCidades[20578][30];  //linhas: 0 a 20577
+    for(int i=0;i<20578;i++) {
+        fgets(vetorCidades[i],30,pArquivoCidades);
+        for(int j=0;j<30;j++)
+        {
+            if(vetorCidades[i][j]=='\n')
+            {
+                vetorCidades[i][j]='\0';
+                j=31;
+            }
+        }
+    }
+    //geraÃ§ao do vetor de nomes para o Campo 3:
+    char vetorNomes[6244][20];  //0 a 6243
+    for(int i=0;i<6244;i++) {
+        fgets(vetorNomes[i],20,pArquivoNomes);
+        for(int j=0;j<20;j++)
+        {
+            if(vetorNomes[i][j]=='\n')
+            {
+                vetorNomes[i][j]='\0';
+                j=21;
+            }
+        }
     }
 
-    pArquivoNomes=fopen("names.txt","rb");
-    if (pArquivoNomes == NULL)
-    {
-        printf("Falha no processamento.\n");
-        exit(0);
+    //geraÃ§ao do vetor de datas para o Campo 4:
+    char vetorDatas[7812][20];
+    for(int i=0;i<7812;i++) {
+        fgets(vetorDatas[i],20,pArquivoDatas);
+        for(int j=0;j<20;j++)
+        {
+            if(vetorDatas[i][j]=='\n')
+            {
+                vetorDatas[i][j]='\0';
+                j=31;
+            }
+        }
     }
+    //Com o vetor de repetiÃ§Ã£o, e os vetores dos dados, utiliza-se o valor do vetor de repetiÃ§Ã£o para encontrar a linha respectiva no vetor de dados de cada campo.
+    //Com isso, Ã© possÃ­vel atribuir ao registro estes dados com certa repetiÃ§Ã£o contida no vetor de nÃºmeros com repetiÃ§Ã£o.
+    //O registro Ã© escrito no arquivo de saÃ­da apÃ³s ter o lixo removido pela funÃ§Ã£o coletorLixo e depois de ser passado para Upper Case.
 
-
-    for(int i=0;i<numeroRegistros;i++,pReg++)
+    for(int i=0;i<numeroRegistros;i++)
     {
-        //Gerador de numero
-        pReg->numero=rand()%10000;
-
-
-        //Gerador de cidade (campo 2)
-        int cont=0;
-        int flag=1;
-
-        intRandom=rand()%20580;
-
-        fseek(pArquivoCidades,0,SEEK_SET);
-        while ((fgets(pReg->str1, sizeof (pReg->str1), pArquivoCidades) != NULL)&&(flag==1))
-        {
-            if (cont == intRandom)
-            {
-            flag=0;
-            }
-            else
-            {
-            cont++;
-            }
-        }
-        for(int j=0;j<c2;j++)
-        {
-            if((pReg->str1[j])=='\r')
-            {
-                (pReg->str1[j])='\0';
-                j=c2;
-            }
-        }
-
-
-        //Gerador de nomes (campo 3)
-        int cont2=0;
-        int flag2=1;
-
-        intRandom=rand()%4945;
-
-        fseek(pArquivoNomes,0,SEEK_SET);
-        while ((fgets(pReg->str2, sizeof (pReg->str2), pArquivoNomes) != NULL)&&(flag2==1))
-        {
-            if (cont2 == intRandom)
-            {
-            flag2=0;
-            }
-            else
-            {
-            cont2++;
-            }
-        }
-        for(int j=0;j<c3;j++)
-        {
-            if((pReg->str2[j])=='\r')
-            {
-                (pReg->str2[j])='\0';
-                j=c3;
-            }
-        }
-
-        //Gerador de data de 1900 a 2019 (ano)
-        intRandom=rand()%4;
-        switch(intRandom)
-        {
-        case 3:
-            pReg->data[0]=3+'0';
-            pReg->data[1]=rand()%2 +'0';
-            pReg->data[2]='/';
-            break;
-        default:
-            pReg->data[0]=intRandom +'0';
-            pReg->data[1]=rand()%10 +'0';
-            pReg->data[2]='/';
-            break;
-        case 0:
-            pReg->data[0]=0 +'0';
-            pReg->data[1]=(1+rand()%9) +'0';
-            pReg->data[2]='/';
-        }
-
-        intRandom=rand()%2;
-        switch(intRandom)
-        {
-        case 1:
-            pReg->data[3]=1+'0';
-            pReg->data[4]=rand()%3 +'0';
-            pReg->data[5]='/';
-            break;
-        default:
-            pReg->data[3]=intRandom +'0';
-            pReg->data[4]=(1+rand()%9) +'0';
-            pReg->data[5]='/';
-            break;
-        }
-
-        intRandom=(1 + rand()%2);
-        switch(intRandom)
-        {
-        case 2:
-            pReg->data[6]='2';
-            pReg->data[7]='0';
-            pReg->data[8]=(rand()%2)+ '0';
-            pReg->data[9]=(rand()%10)+ '0';
-            break;
-        case 1:
-            pReg->data[6]='1';
-            pReg->data[7]='9';
-            pReg->data[8]= (rand()%10)+ '0';
-            pReg->data[9]= (rand()%10)+ '0';
-        }
-        //Coloca @ nos espacos vazios que contem lixo
+        pReg->numero=vetorRepC1[i];
+        memcpy(pReg->str1,vetorCidades[vetorRepC2[i]],30);
+        memcpy(pReg->str2,vetorNomes[vetorRepC3[i]],20);
+        memcpy(pReg->data,vetorDatas[vetorRepC4[i]],10);
         coletorLixo(pReg);
-        //loop que varia até encontrar o @ na string. Passa para uppercase todos os caracteres anteriores ao @. Tanto para o campo 2 quanto para o campo 3.
         for(int j=0;(pReg->str1[j])!='@';j++)
         {
             pReg->str1[j]=toupper(pReg->str1[j]);
@@ -369,100 +463,106 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
         {
             pReg->str2[j]=toupper(pReg->str2[j]);
         }
-
-        fwrite(pReg,sizeof(tRegistro),1,pArquivo);  //Escreve o registro no arquivo que está sendo gerado.
+        fwrite(pReg,sizeof(tRegistro),1,pArquivo);
     }
+    free(vetorRepC1);
+    free(vetorRepC2);
+    free(vetorRepC3);
+    free(vetorRepC4);
+
     fseek(pArquivo,0,SEEK_SET);
-    fwrite("1",sizeof(char),1,pArquivo);    // Atualiza o registro de cabeçalho.
-    fclose(pArquivo);                       //Fecha os arquivos que estão sendo usados.
+    fwrite("1",sizeof(char),1,pArquivo);  // Atualiza o registro de cabeÃ§alho.
+
+    fclose(pArquivo);                     //Fecha os arquivos que estÃ£o sendo usados.
     fclose(pArquivoCidades);
     fclose(pArquivoNomes);
+    fclose(pArquivoDatas);
     printf("Arquivo gerado.\n");
 }
 
-/* Função que lê um arquivo gerado durante a execução para a memória RAM.*/
-//Parâmetros: ponteiro para registro, nome do arquivo, total de registros que o arquivo em questão contem.
+/* Funï¿½ï¿½o que lï¿½ um arquivo gerado durante a execuï¿½ï¿½o para a memï¿½ria RAM.*/
+//Parï¿½metros: ponteiro para registro, nome do arquivo, total de registros que o arquivo em questï¿½o contem.
 void lerArquivoParaRAM(tRegistro *pReg,char *nome,int totalDeRegistros) //Le para a RAM os registros de um arquivo
 {
     FILE *pArquivo;
-    pArquivo=fopen(nome,"rb");      //O arquivo pedido é aberto para a leitura.
+    pArquivo=fopen(nome,"rb");      //O arquivo pedido ï¿½ aberto para a leitura.
     if (pArquivo == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
     fseek(pArquivo,sizeof(char),SEEK_SET);
-    fread(pReg,sizeof(tRegistro),totalDeRegistros,pArquivo);    //Todos registros são lidos.
-    fclose(pArquivo);                                           //O arquivo é fechado.
+    fread(pReg,sizeof(tRegistro),totalDeRegistros,pArquivo);    //Todos registros sï¿½o lidos.
+    fclose(pArquivo);                                           //O arquivo ï¿½ fechado.
 }
 
 
-/*Função que grava os registros contidos em RAM para um arquivo */
-//Parâmetros: ponteiro para o registro, nome do arquivo que será escrito, total de registros que serão gravados.
+/*Funï¿½ï¿½o que grava os registros contidos em RAM para um arquivo */
+//Parï¿½metros: ponteiro para o registro, nome do arquivo que serï¿½ escrito, total de registros que serï¿½o gravados.
 void gravaArquivoParaMEM(tRegistro *pReg,char *nome,int totalDeRegistros) //Grava o conteudo de registros em RAM num arquivo
 {
     FILE *pArquivo;
-    pArquivo=fopen(nome,"wb");      //O arquivo pedido é aberto para escrita.
+    pArquivo=fopen(nome,"wb");      //O arquivo pedido ï¿½ aberto para escrita.
     if (pArquivo == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
-    fwrite("0",sizeof(char),1,pArquivo);            //O Registro de cabeçalho é setado para 0.
-    fwrite(pReg,sizeof(tRegistro),totalDeRegistros,pArquivo);   //Os registros são gravados no arquivo.
+    fwrite("0",sizeof(char),1,pArquivo);            //O Registro de cabeï¿½alho ï¿½ setado para 0.
+    fwrite(pReg,sizeof(tRegistro),totalDeRegistros,pArquivo);   //Os registros sï¿½o gravados no arquivo.
     fseek(pArquivo,0,SEEK_SET);
-    fwrite("1",sizeof(char),1,pArquivo);        //O Registro de cabeçalho é atualizado para 1
+    fwrite("1",sizeof(char),1,pArquivo);        //O Registro de cabeï¿½alho ï¿½ atualizado para 1
     fclose(pArquivo);
 }
 
-/* As funções a seguir são utilizadas para auxiliar durante a execução do programa.
-Um arquivo chamado totalarquivos.bin é criado quando inicia-se a execução do programa.
-Este arquivo contém a struct tArquivos, que possui nome do arquivo, total de registros e ordenação como variáveis.
-Todos arquivos gerados durante a execução do programa são guardados no totalarquivos.bin para se ter fácil  acesso às informações sobre eles.*/
+/* As funï¿½ï¿½es a seguir sï¿½o utilizadas para auxiliar durante a execuï¿½ï¿½o do programa.
+Um arquivo chamado totalarquivos.bin ï¿½ criado quando inicia-se a execuï¿½ï¿½o do programa.
+Este arquivo contï¿½m a struct tArquivos, que possui nome do arquivo, total de registros e ordenaï¿½ï¿½o como variï¿½veis.
+Todos arquivos gerados durante a execuï¿½ï¿½o do programa sï¿½o guardados no totalarquivos.bin para se ter fï¿½cil  acesso ï¿½s informaï¿½ï¿½es sobre eles.*/
 
-/*Função que salva os dados de um arquivo criado no totalarquivos.bin */
-//Parâmetros: numero total de registros do arquivo, nome do arquivo, ordenação do arquivo.
+/*Funï¿½ï¿½o que salva os dados de um arquivo criado no totalarquivos.bin */
+//Parï¿½metros: numero total de registros do arquivo, nome do arquivo, ordenaï¿½ï¿½o do arquivo.
 void salvarTotalArquivos(int numeroRegistros,char *nome,int ordenacao)      //Adiciona as informacoes de um arquivo criado novo ao arquivo totarquivos.bin
 {
     FILE *pTotalArquivos;
-    tArquivos *pArquivo;            //O ponteiro pArquivo é criado e aponta para a variável arquivo.
-    tArquivos arquivo;              //A variável arquivo é criada para armazenar os dados.
+    tArquivos *pArquivo;            //O ponteiro pArquivo ï¿½ criado e aponta para a variï¿½vel arquivo.
+    tArquivos arquivo;              //A variï¿½vel arquivo ï¿½ criada para armazenar os dados.
     pArquivo=&arquivo;
 
-    strcpy(arquivo.nomeArquivo,nome);           //a variável recebe os dados(nome, número de registros, ordenação)
+    strcpy(arquivo.nomeArquivo,nome);           //a variï¿½vel recebe os dados(nome, nï¿½mero de registros, ordenaï¿½ï¿½o)
     arquivo.numeroRegistros=numeroRegistros;
     arquivo.ordenacao=ordenacao;
 
-    pTotalArquivos=fopen("totalarquivos.bin","ab");     //totalarquivos.bin é aberto em append.
+    pTotalArquivos=fopen("totalarquivos.bin","ab");     //totalarquivos.bin ï¿½ aberto em append.
     if (pTotalArquivos == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
-    fwrite(pArquivo,sizeof(tArquivos),1,pTotalArquivos);        //Os dados do arquivo são escritos.
+    fwrite(pArquivo,sizeof(tArquivos),1,pTotalArquivos);        //Os dados do arquivo sï¿½o escritos.
     fclose(pTotalArquivos);
 }
 
-/*Função que retorna a quantidade de registros que certo arquivo tem.*/
-//Parâmetro: nome do arquivo.
+/*Funï¿½ï¿½o que retorna a quantidade de registros que certo arquivo tem.*/
+//Parï¿½metro: nome do arquivo.
 int lerTotalArquivos(char *nome)        //Entra com o nome do arquivo e retorna A QUANTIDADE DE REGISTROS que o arquivo pedido tem.
 {
     FILE *pTotalArquivos;
     tArquivos *pArquivo;
-    tArquivos arquivo;                  //Uma variavel do tipo arquivo é criada e um ponteiro para ela também
+    tArquivos arquivo;                  //Uma variavel do tipo arquivo ï¿½ criada e um ponteiro para ela tambï¿½m
     pArquivo=&arquivo;
 
-    pTotalArquivos=fopen("totalarquivos.bin","rb");     //O arquivo totalarquivos.bin é aberto para leitura, a fim de se procurar o nome passado como parâmetro.
+    pTotalArquivos=fopen("totalarquivos.bin","rb");     //O arquivo totalarquivos.bin ï¿½ aberto para leitura, a fim de se procurar o nome passado como parï¿½metro.
     if (pTotalArquivos == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
 
-    while(!feof(pTotalArquivos))                //O loop vai até o fim do arquivo, lendo registro por registro até encontrar um com o nome pedido.
+    while(!feof(pTotalArquivos))                //O loop vai atï¿½ o fim do arquivo, lendo registro por registro atï¿½ encontrar um com o nome pedido.
     {
         fread(pArquivo,sizeof(tArquivos),1,pTotalArquivos);
-        if((strcmp(pArquivo->nomeArquivo,nome))==0)         //quando o nome é encontrado, retorna-se a quantidade de registros do respectivo arquivo.
+        if((strcmp(pArquivo->nomeArquivo,nome))==0)         //quando o nome ï¿½ encontrado, retorna-se a quantidade de registros do respectivo arquivo.
         {
             fclose(pTotalArquivos);
             return pArquivo->numeroRegistros;
@@ -473,14 +573,14 @@ int lerTotalArquivos(char *nome)        //Entra com o nome do arquivo e retorna 
 }
 
 
-/* Está função conta o tanto de registros que o arquivo pedido tem. Diferente da função anterior, está conta diretamente do arquivo,
+/* Estï¿½ funï¿½ï¿½o conta o tanto de registros que o arquivo pedido tem. Diferente da funï¿½ï¿½o anterior, estï¿½ conta diretamente do arquivo,
 enquanto a outra le diretamento do totalarquivos.bin*/
-//Parâmetro: nome do arquivo.
+//Parï¿½metro: nome do arquivo.
 int contarRegistros(char *nome)     // conta o total de registro que certo arquivo tem
 {
     FILE *pArquivo;
     tRegistro *pReg;
-    tRegistro registro;         //Variavel e ponteiro para tRegistro são criadas.
+    tRegistro registro;         //Variavel e ponteiro para tRegistro sï¿½o criadas.
     pReg=&registro;
     int contador=0;             //Contador que armazena os registros contados.
 
@@ -491,34 +591,34 @@ int contarRegistros(char *nome)     // conta o total de registro que certo arqui
     exit(0);
     }
 
-    while(!feof(pArquivo))          //Loop que varia até o fim do arquivo.
+    while(!feof(pArquivo))          //Loop que varia atï¿½ o fim do arquivo.
     {
-        fread(pReg,sizeof(tRegistro),1,pArquivo);           //Arquivo é lido e contador é somado de +1.
+        fread(pReg,sizeof(tRegistro),1,pArquivo);           //Arquivo ï¿½ lido e contador ï¿½ somado de +1.
         contador++;
     }
     fclose(pArquivo);
     return contador-1;          //retorna contador-1 para descontar a ultima tentativa de leitura.
 }
 
-/*Função que checa no totalarquivos.bin se o arquivo pedido está ou não ordenado.*/
-//Parâmetro: nome do arquivo.
+/*Funï¿½ï¿½o que checa no totalarquivos.bin se o arquivo pedido estï¿½ ou nï¿½o ordenado.*/
+//Parï¿½metro: nome do arquivo.
 int checarOrdenacao(char *nome) {   //Entra com o nome do arquivo e retorna se o arquivo esta ordenado ou nao.
     FILE *pTotalArquivos;
     tArquivos *pArquivo;
-    tArquivos arquivo;              //Ponteiro e variável tArquivos são criados.
+    tArquivos arquivo;              //Ponteiro e variï¿½vel tArquivos sï¿½o criados.
     pArquivo=&arquivo;
 
-    pTotalArquivos=fopen("totalarquivos.bin","rb");     //Arquivo totalarquivos.bin é aberto para leitura.
+    pTotalArquivos=fopen("totalarquivos.bin","rb");     //Arquivo totalarquivos.bin ï¿½ aberto para leitura.
     if (pTotalArquivos == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
 
-    while(!feof(pTotalArquivos))                //Loop que varia até encontrar um arquivo com o nome igual ao passado como parâmetro.
+    while(!feof(pTotalArquivos))                //Loop que varia atï¿½ encontrar um arquivo com o nome igual ao passado como parï¿½metro.
     {
         fread(pArquivo,sizeof(tArquivos),1,pTotalArquivos);
-        if(((strcmp(pArquivo->nomeArquivo,nome))==0)&&(pArquivo->ordenacao==1))         //Se encontrar e o arquivo está ordenado, retorna 1, significando que está ordenado.
+        if(((strcmp(pArquivo->nomeArquivo,nome))==0)&&(pArquivo->ordenacao==1))         //Se encontrar e o arquivo estï¿½ ordenado, retorna 1, significando que estï¿½ ordenado.
         {
             fclose(pTotalArquivos);
             return 1;
@@ -528,8 +628,8 @@ int checarOrdenacao(char *nome) {   //Entra com o nome do arquivo e retorna se o
     return 0;
 }
 
-/*Função de comparação utilizada pelo qsort para comparar dois elementos e checar qual é maior ou menor*/
-//Parâmetros: dois elementos que serão comparados.
+/*Funï¿½ï¿½o de comparaï¿½ï¿½o utilizada pelo qsort para comparar dois elementos e checar qual ï¿½ maior ou menor*/
+//Parï¿½metros: dois elementos que serï¿½o comparados.
 int cmpFunc (const void * a, const void * b) {
     const tRegistro *p1 = a;
     const tRegistro *p2 = b;
@@ -560,10 +660,10 @@ int cmpFunc (const void * a, const void * b) {
         return(-1);
 }
 
-/*Função que realiza o merging de dois arquivos.*/
-//Parâmetros: Nome do arquivo ordenado 1, nome do arquivo ordenado 2, nome do arquivo de saida.
+/*Funï¿½ï¿½o que realiza o merging de dois arquivos.*/
+//Parï¿½metros: Nome do arquivo ordenado 1, nome do arquivo ordenado 2, nome do arquivo de saida.
 void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
-    FILE *pArq1;                        //São criados ponteiros para os arquivos, ponteiros e variáveis para tRegistros.
+    FILE *pArq1;                        //Sï¿½o criados ponteiros para os arquivos, ponteiros e variï¿½veis para tRegistros.
     FILE *pArq2;
     FILE *pArqSaida;
 
@@ -575,7 +675,7 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
     tRegistro reg2;
     pReg2=&reg2;
 
-    pArq1=fopen(nomeArq1,"rb");             //Arquivo 1 e 2 são abertos para leitura e arquivo de saida aberto para escrita.
+    pArq1=fopen(nomeArq1,"rb");             //Arquivo 1 e 2 sï¿½o abertos para leitura e arquivo de saida aberto para escrita.
     if (pArq1 == NULL)
     {
     printf("Falha no processamento.\n");
@@ -595,16 +695,16 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
     printf("Falha no processamento.\n");
     exit(0);
     }
-    fwrite("0",sizeof(char),1,pArqSaida);           //Registro de cabeçalho do arquivo de saida é setado para 0.
+    fwrite("0",sizeof(char),1,pArqSaida);           //Registro de cabeï¿½alho do arquivo de saida ï¿½ setado para 0.
     fseek(pArq1,sizeof(char),SEEK_SET);
     fseek(pArq2,sizeof(char),SEEK_SET);
 
-    fread(pReg1,sizeof(tRegistro),1,pArq1);     //Arquivo 1 e 2 são lidos depois do primeiro byte(registro de cabeçalho). O primeiro registro de 1 e de 2 são armazenados nos ponteiros para tRegistros 1 e 2 respectivamente.
+    fread(pReg1,sizeof(tRegistro),1,pArq1);     //Arquivo 1 e 2 sï¿½o lidos depois do primeiro byte(registro de cabeï¿½alho). O primeiro registro de 1 e de 2 sï¿½o armazenados nos ponteiros para tRegistros 1 e 2 respectivamente.
     fread(pReg2,sizeof(tRegistro),1,pArq2);
 
-        while((!feof(pArq2))&&(!feof(pArq1)))       //Loop que continua até encontrar o fim de um dos arquivos.
+        while((!feof(pArq2))&&(!feof(pArq1)))       //Loop que continua atï¿½ encontrar o fim de um dos arquivos.
         {
-            if(pReg1->numero < pReg2->numero)       //O campo 1 dos registros 1 e 2 é comparado, o menor deles é escrito no arquivo de saida e o que foi escrito é substituido pelo próximo registro do arquivo correspondente.
+            if(pReg1->numero < pReg2->numero)       //O campo 1 dos registros 1 e 2 ï¿½ comparado, o menor deles ï¿½ escrito no arquivo de saida e o que foi escrito ï¿½ substituido pelo prï¿½ximo registro do arquivo correspondente.
             {
                 fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                 fread(pReg1,sizeof(tRegistro),1,pArq1);
@@ -618,7 +718,7 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
                 }
                 else
                 {
-                    if(memcmp(pReg1->str1, pReg2->str1,30) < 0)        //Se os números são iguais, o campo 2 é comparado, o menor deles é escrito no arquivo de saida e o que foi escrito é substituido pelo próximo registro do arquivo correspondente.
+                    if(memcmp(pReg1->str1, pReg2->str1,30) < 0)        //Se os nï¿½meros sï¿½o iguais, o campo 2 ï¿½ comparado, o menor deles ï¿½ escrito no arquivo de saida e o que foi escrito ï¿½ substituido pelo prï¿½ximo registro do arquivo correspondente.
                     {
                         fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                         fread(pReg1,sizeof(tRegistro),1,pArq1);
@@ -632,7 +732,7 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
                         }
                         else
                         {
-                            if(memcmp(pReg1->str2,pReg2->str2,20) < 0)  //Se os campos 2 são iguais, o campo 3 é comparado, o menor deles é escrito no arquivo de saida e o que foi escrito é substituido pelo próximo registro do arquivo correspondente.
+                            if(memcmp(pReg1->str2,pReg2->str2,20) < 0)  //Se os campos 2 sï¿½o iguais, o campo 3 ï¿½ comparado, o menor deles ï¿½ escrito no arquivo de saida e o que foi escrito ï¿½ substituido pelo prï¿½ximo registro do arquivo correspondente.
                             {
                                 fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                 fread(pReg1,sizeof(tRegistro),1,pArq1);
@@ -646,7 +746,7 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
                                 }
                                 else
                                 {
-                                    if(atoi(&pReg1->data[6]) < atoi(&pReg2->data[6]))       //Se os campos 3 são iguais, o campo 4 é comparado, primeiramente por ano, depois por mês, depois por dia, o menor deles é escrito no arquivo de saida e o que foi escrito é substituido pelo próximo registro do arquivo correspondente.
+                                    if(atoi(&pReg1->data[6]) < atoi(&pReg2->data[6]))       //Se os campos 3 sï¿½o iguais, o campo 4 ï¿½ comparado, primeiramente por ano, depois por mï¿½s, depois por dia, o menor deles ï¿½ escrito no arquivo de saida e o que foi escrito ï¿½ substituido pelo prï¿½ximo registro do arquivo correspondente.
                                     {
                                         fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                         fread(pReg1,sizeof(tRegistro),1,pArq1);
@@ -687,7 +787,7 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
                                                             fread(pReg2,sizeof(tRegistro),1,pArq2);
                                                         }
                                                         else
-                                                        {   //se os registros são totalmente iguais, grava apenas 1, e os dois são substituidos pelos próximos registros correspondentes de cada arquivo.
+                                                        {   //se os registros sï¿½o totalmente iguais, grava apenas 1, e os dois sï¿½o substituidos pelos prï¿½ximos registros correspondentes de cada arquivo.
                                                             fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                                             fread(pReg1,sizeof(tRegistro),1,pArq1);
                                                             fread(pReg2,sizeof(tRegistro),1,pArq2);
@@ -703,29 +803,29 @@ void merging(char *nomeArq1,char *nomeArq2,char *nomeArqSaida) {
                     }
                 }
             }
-        } // Assim que um dos arquivo termina, precisa-se terminar de ler o que não atingiu o fim do arquivo ainda. Caso o arquivo 1 não tenha terminado, entra no primeiro loop e escreve o resto do arquivo 1.
+        } // Assim que um dos arquivo termina, precisa-se terminar de ler o que nï¿½o atingiu o fim do arquivo ainda. Caso o arquivo 1 nï¿½o tenha terminado, entra no primeiro loop e escreve o resto do arquivo 1.
         while(!feof(pArq1))
         {
             fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
             fread(pReg1,sizeof(tRegistro),1,pArq1);
         }
-        while(!feof(pArq2)) //Caso o arquivo 2 não tenha terminado, entra no segundo loop e escreve o resto do arquivo 2.
+        while(!feof(pArq2)) //Caso o arquivo 2 nï¿½o tenha terminado, entra no segundo loop e escreve o resto do arquivo 2.
         {
             fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
             fread(pReg2,sizeof(tRegistro),1,pArq2);
         }
 
-    fclose(pArq1);      //Os arquivos são fechados
+    fclose(pArq1);      //Os arquivos sï¿½o fechados
     fclose(pArq2);
     fseek(pArqSaida,0,SEEK_SET);
-    fwrite("1",sizeof(char),1,pArqSaida); //O registro de cabeçalho do arquivo de saída é atualizado e ele também é fechado.
+    fwrite("1",sizeof(char),1,pArqSaida); //O registro de cabeï¿½alho do arquivo de saï¿½da ï¿½ atualizado e ele tambï¿½m ï¿½ fechado.
     fclose(pArqSaida);
 }
 
-/*Função que realiza o matching de dois arquivos.*/
-//Parâmetros: Nome do arquivo 1, nome do arquivo 2, nome do arquivo de saida, quantidade de registros do arquivo 1, quantidade de registros do arquivo 2.
+/*Funï¿½ï¿½o que realiza o matching de dois arquivos.*/
+//Parï¿½metros: Nome do arquivo 1, nome do arquivo 2, nome do arquivo de saida, quantidade de registros do arquivo 1, quantidade de registros do arquivo 2.
 void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int qtdReg2) {
-    FILE *pArq1;                //Ponteiros para os arquivos, variáveis e ponteiros para tRegistros são criadas.
+    FILE *pArq1;                //Ponteiros para os arquivos, variï¿½veis e ponteiros para tRegistros sï¿½o criadas.
     FILE *pArq2;
     FILE *pArqSaida;
 
@@ -737,15 +837,15 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
     tRegistro reg2;
     pReg2=&reg2;
 
-    tRegistro *pRegAux;     //Uma variável e ponteiro para tRegistros é criada para auxiliar.
+    tRegistro *pRegAux;     //Uma variï¿½vel e ponteiro para tRegistros ï¿½ criada para auxiliar.
     tRegistro regAux;
     pRegAux=&regAux;
     pRegAux->numero=-1;
 
-    int i1=0;       //Contadores para a leitura dos arquivos, cada vez que o arquivo 1 é lido, i1 recebe i1+1. Mesma coisa para o i2 e arquivo 2.
+    int i1=0;       //Contadores para a leitura dos arquivos, cada vez que o arquivo 1 ï¿½ lido, i1 recebe i1+1. Mesma coisa para o i2 e arquivo 2.
     int i2=0;
 
-    pArq1=fopen(nomeArq1,"rb");     //Os arquivos 1 e 2 são abertos para leitura.
+    pArq1=fopen(nomeArq1,"rb");     //Os arquivos 1 e 2 sï¿½o abertos para leitura.
     if (pArq1 == NULL)
     {
     printf("Falha no processamento.\n");
@@ -759,7 +859,7 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
     exit(0);
     }
 
-    pArqSaida=fopen(nomeArqSaida,"wb");     //O arquivo de saída é aberto para escrita, registro de cabeçalho é setado para 0.
+    pArqSaida=fopen(nomeArqSaida,"wb");     //O arquivo de saï¿½da ï¿½ aberto para escrita, registro de cabeï¿½alho ï¿½ setado para 0.
     if (pArqSaida == NULL)
     {
     printf("Falha no processamento.\n");
@@ -769,17 +869,17 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
     fseek(pArq1,sizeof(char),SEEK_SET);
     fseek(pArq2,sizeof(char),SEEK_SET);
 
-    fread(pReg1,sizeof(tRegistro),1,pArq1);     //Os primeiros registros do arquivo 1 e arquivos 2 são lidos para pReg1 e pReg2. i1 e i2 são somado de 1.
+    fread(pReg1,sizeof(tRegistro),1,pArq1);     //Os primeiros registros do arquivo 1 e arquivos 2 sï¿½o lidos para pReg1 e pReg2. i1 e i2 sï¿½o somado de 1.
     i1++;
     fread(pReg2,sizeof(tRegistro),1,pArq2);
     i2++;
 
-    //Cada vez que um registro for escrito no arquivo de saída, o registro auxiliar (pRegAux) recebe o valor do campo 1 como memória, para poder ser comparado com os registros posteriores, que estarão em pReg1 e pReg2.
-    while((i1<=qtdReg1)&&(i2<=qtdReg2)) //Loop que varia até atingir o fim de um dos arquivos, ou seja, o arquivo vai ser lido até o total de registros contidos.
+    //Cada vez que um registro for escrito no arquivo de saï¿½da, o registro auxiliar (pRegAux) recebe o valor do campo 1 como memï¿½ria, para poder ser comparado com os registros posteriores, que estarï¿½o em pReg1 e pReg2.
+    while((i1<=qtdReg1)&&(i2<=qtdReg2)) //Loop que varia atï¿½ atingir o fim de um dos arquivos, ou seja, o arquivo vai ser lido atï¿½ o total de registros contidos.
     {
-        if(pReg1->numero<pReg2->numero)     //Se o número(número refere-se ao campo 1) do registro 1 for menor que o do registro 2, o número do registro 1 é comparado com o número do registro auxiliar, que foi escrito anteriormente, para saber se há insercção entre 1 o número escrito anteriormente.
+        if(pReg1->numero<pReg2->numero)     //Se o nï¿½mero(nï¿½mero refere-se ao campo 1) do registro 1 for menor que o do registro 2, o nï¿½mero do registro 1 ï¿½ comparado com o nï¿½mero do registro auxiliar, que foi escrito anteriormente, para saber se hï¿½ insercï¿½ï¿½o entre 1 o nï¿½mero escrito anteriormente.
         {
-            if(pReg1->numero==pRegAux->numero) //Se são iguais(há intersecção entre 1 e o registro escrito anteriormente), o número do registro auxiliar recebe o número do registro 1. O registro 1 é escrito no arquivo de saida. O próximo registro do arquivo 1 é lido para pReg1.
+            if(pReg1->numero==pRegAux->numero) //Se sï¿½o iguais(hï¿½ intersecï¿½ï¿½o entre 1 e o registro escrito anteriormente), o nï¿½mero do registro auxiliar recebe o nï¿½mero do registro 1. O registro 1 ï¿½ escrito no arquivo de saida. O prï¿½ximo registro do arquivo 1 ï¿½ lido para pReg1.
             {
                 pRegAux->numero=pReg1->numero;
                 fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
@@ -787,16 +887,16 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
                 i1++;
             }
             else
-            {           //Se o número do registro auxiliar não for igual ao do registro 1(não há intersecção entre 1 e o número escrito anteriormente), significa que a intersecção com o número contido no registro auxiliar acabou, então pode ser lido o próximo registro para pReg1.
+            {           //Se o nï¿½mero do registro auxiliar nï¿½o for igual ao do registro 1(nï¿½o hï¿½ intersecï¿½ï¿½o entre 1 e o nï¿½mero escrito anteriormente), significa que a intersecï¿½ï¿½o com o nï¿½mero contido no registro auxiliar acabou, entï¿½o pode ser lido o prï¿½ximo registro para pReg1.
                 fread(pReg1,sizeof(tRegistro),1,pArq1);
                 i1++;
             }
         }
         else
         {
-            if(pReg1->numero>pReg2->numero)     //O mesmo processo é feito no if a seguir. Este realiza a comparação caso o registro 2 for menor.
+            if(pReg1->numero>pReg2->numero)     //O mesmo processo ï¿½ feito no if a seguir. Este realiza a comparaï¿½ï¿½o caso o registro 2 for menor.
             {
-                if(pReg2->numero==pRegAux->numero)  //Compara registro 2 com o registro auxiliar. Se for igual, significa que a intersecção não acabou, o registro 2 é escrito e o próximo registro é lido do arquivo 2. O registro auxiliar recebe o registro 2 que foi escrito.
+                if(pReg2->numero==pRegAux->numero)  //Compara registro 2 com o registro auxiliar. Se for igual, significa que a intersecï¿½ï¿½o nï¿½o acabou, o registro 2 ï¿½ escrito e o prï¿½ximo registro ï¿½ lido do arquivo 2. O registro auxiliar recebe o registro 2 que foi escrito.
                 {
                     pRegAux->numero=pReg2->numero;
                     fwrite(pReg2,sizeof(tRegistro),1,pArqSaida);
@@ -808,7 +908,7 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
                     fread(pReg2,sizeof(tRegistro),1,pArq2);
                     i2++;
                 }
-            }       //Se os números são iguais, significa que há intersecção entre eles, então o menor entre eles é escolhido pelos if's a seguir e é escrito no arquivo de saída. O registro auxiliar recebe o valor escrito como memória para saber se a intersecção continua para os registros posteriores.
+            }       //Se os nï¿½meros sï¿½o iguais, significa que hï¿½ intersecï¿½ï¿½o entre eles, entï¿½o o menor entre eles ï¿½ escolhido pelos if's a seguir e ï¿½ escrito no arquivo de saï¿½da. O registro auxiliar recebe o valor escrito como memï¿½ria para saber se a intersecï¿½ï¿½o continua para os registros posteriores.
             else
             {
                 if(memcmp(pReg1->str1,pReg2->str1,30)<0)        //Compara campo 2
@@ -865,7 +965,7 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
                                     }
                                     else
                                     {
-                                        if(atoi(&pReg1->data[3])<atoi(&pReg2->data[3])) //Compara campo 4, compara o mês.
+                                        if(atoi(&pReg1->data[3])<atoi(&pReg2->data[3])) //Compara campo 4, compara o mï¿½s.
                                         {
                                             pRegAux->numero=pReg1->numero;
                                             fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
@@ -901,7 +1001,7 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
                                                     }
                                                     else
                                                     {
-                                                        //Se os registros são totalmente iguais,o registro auxiliar recebe o registro 1, escreve-se somente 1, e le os próximos dos respectivos arquivos.
+                                                        //Se os registros sï¿½o totalmente iguais,o registro auxiliar recebe o registro 1, escreve-se somente 1, e le os prï¿½ximos dos respectivos arquivos.
                                                         pRegAux->numero=pReg1->numero;
                                                         fwrite(pReg1,sizeof(tRegistro),1,pArqSaida);
                                                         fread(pReg2,sizeof(tRegistro),1,pArq2);
@@ -923,9 +1023,9 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
 
     } //fim while do i1 e i2
 
-    //Quando um dos arquivos termina, precisa-se terminar de escrever o que não terminou. Porém é necessário escrever somente os números que pertencem a intersecção, este número está
-    //armazenado no registro auxiliar. Então entra-se em um dos dois loops dependendo do arquivo que não terminou, e só é escrito no arquivo de saída os próximos valores que são iguais
-    //ao número armazenado no registro auxiliar(Que pertencem a intersecção).
+    //Quando um dos arquivos termina, precisa-se terminar de escrever o que nï¿½o terminou. Porï¿½m ï¿½ necessï¿½rio escrever somente os nï¿½meros que pertencem a intersecï¿½ï¿½o, este nï¿½mero estï¿½
+    //armazenado no registro auxiliar. Entï¿½o entra-se em um dos dois loops dependendo do arquivo que nï¿½o terminou, e sï¿½ ï¿½ escrito no arquivo de saï¿½da os prï¿½ximos valores que sï¿½o iguais
+    //ao nï¿½mero armazenado no registro auxiliar(Que pertencem a intersecï¿½ï¿½o).
     while(i1<=qtdReg1)
     {
         if(pRegAux->numero==pReg1->numero)
@@ -956,9 +1056,9 @@ void matching(char *nomeArq1,char *nomeArq2,char *nomeArqSaida,int qtdReg1,int q
         }
     }
 
-    fclose(pArq1);      //Os arquivos são fechados.
+    fclose(pArq1);      //Os arquivos sï¿½o fechados.
     fclose(pArq2);
-    fseek(pArqSaida,0,SEEK_SET);        //O arquivo de saída sofre alteração no registro de cabeçalho para 1 e é fechado.
+    fseek(pArqSaida,0,SEEK_SET);        //O arquivo de saï¿½da sofre alteraï¿½ï¿½o no registro de cabeï¿½alho para 1 e ï¿½ fechado.
     fwrite("1",sizeof(char),1,pArqSaida);
     fclose(pArqSaida);
 
@@ -996,10 +1096,9 @@ int nomeArquivos(ARQUIVOS **parq) {
             strcpy(arq->arqSaida, arq->arqEntrada[l]);
         else {
             pString[l] = arq->arqEntrada[l];
-            printf("%d: %s\n", l, pString[l]);
         }
     }
-    printf("%s\n", arq->arqSaida);
+    arq->arqSaida[strlen(arq->arqSaida)-1] = '\0';
     free(arq->arqEntrada);
     arq->arqEntrada = pString;
     free(entrada);
@@ -1009,141 +1108,387 @@ int nomeArquivos(ARQUIVOS **parq) {
     return 0;
 }
 
-void multiwaymerge(char *nomeArquivos) {
-    //pARQUIVOS *ponteiroArquivos = abrirArquivos(nomeArquivos);
+int nomeArquivosArgv(ARQUIVOS **parq, int argc, char *argv[]) {
+    ARQUIVOS *arq;
+
+    arq = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
+    arq->arqEntrada = (char **) calloc(argc - 3, sizeof(char *));
+    arq->numArq = -1;
+
+    if(arq == NULL || parq == NULL || argv == NULL || arq->arqEntrada == NULL)
+        exit(-1);
+
+    for (int i = 2; i < (argc - 1); i++) {
+        arq->arqEntrada[i - 2] = argv[i];
+        printf("%s\n", arq->arqEntrada[i-2]);
+        arq->numArq += 1;
+    }
+    printf("%s\n", strcpy(arq->arqSaida, argv[argc - 1]));
+    *parq = arq;
+}
+
+void multiwaymerge(ARQUIVOS **pArq) {
+    ARQUIVOS *pArquivos;
+    FILE **fp;
+    tRegistro **paginas;
+    NO_HEAP *arvoreMin;
+    short int flag_fim = 0;
+
+    pArquivos = *pArq;
+    fp = calloc((pArquivos->numArq) + 1, sizeof(FILE *));
+    paginas = calloc(pArquivos->numArq, sizeof(tRegistro *));
+    arvoreMin = calloc(pArquivos->numArq, sizeof(NO_HEAP));
+
+    for (int i = 0; i < pArquivos->numArq; i++) {
+        fp[i] = fopen(pArquivos->arqEntrada[i], "rb");
+        paginas[i] = inicializarArqEmRAM(fp[i]);
+        atualizarPaginaRAM(paginas[i], fp[i]);
+        arvoreMin[i].registro = &(paginas[i][0]);
+        arvoreMin[i].index = 0;
+        arvoreMin[i].arqIndex = i;
+    }
+    fp[pArquivos->numArq] = fopen(pArquivos->arqSaida, "wb");
+    fwrite("0", sizeof(char), 1, fp[pArquivos->numArq]);
+
+    while(flag_fim < pArquivos->numArq) {
+        heapSort(arvoreMin, pArquivos->numArq);
+
+        //outros heap heapSort
+
+        //pop pro arquivo de escrita
+        fwrite(&(arvoreMin[0].registro->numero), sizeof(int), 1, fp[pArquivos->numArq]);
+        fwrite(arvoreMin[0].registro->str1, sizeof(char), 30, fp[pArquivos->numArq]);
+        fwrite(arvoreMin[0].registro->str2, sizeof(char), 20, fp[pArquivos->numArq]);
+        fwrite(arvoreMin[0].registro->data, sizeof(char), 10, fp[pArquivos->numArq]);
+
+        //att arvoreMin
+        if (arvoreMin[0].index < 63) {
+            arvoreMin[0].index += 1;
+            if (paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero == 0) {
+                arvoreMin[0].registro->numero = 2147483647;
+                flag_fim++;
+            } else
+            arvoreMin[0].registro = &(paginas[arvoreMin[0].arqIndex][arvoreMin[0].index]);
+        } else {
+            atualizarPaginaRAM(paginas[arvoreMin[0].arqIndex], fp[arvoreMin[0].arqIndex]);
+        }
+    }
+    fseek(fp[pArquivos->numArq], 0, SEEK_SET);
+    fwrite("1", sizeof(char), 1, fp[pArquivos->numArq]);
+
+    for (int i = 0; i < pArquivos->numArq; i++) {
+        fclose(fp[i]);
+        free(paginas[i]);
+    }
+    fclose(fp[pArquivos->numArq]);
+    free(arvoreMin);
+    free(paginas);
+    free(fp);
+}
+
+void mergeSortExterno(char *nome,char *nomeSaida) {
+    //PÃ¡gina de disco: tamanho 16.000 bytes
+    //tamanho do buffer: 4 pÃ¡ginas de disco = 4x16000=64000
+    //64000 bytes = 1000x64 = 1000 vezes o tamanho de 64 bytes(tamanho de 1 registro)
+    tRegistro *buffer=calloc(1000,sizeof(tRegistro));
+
+    //Matriz com o nome dos subarquivos. Cada subarquivo armazena 1000 registros.
+    char subarquivos[10][13];
+    strcpy(subarquivos[0],"sub_arquivo0");
+    strcpy(subarquivos[1],"sub_arquivo1");
+    strcpy(subarquivos[2],"sub_arquivo2");
+    strcpy(subarquivos[3],"sub_arquivo3");
+    strcpy(subarquivos[4],"sub_arquivo4");
+    strcpy(subarquivos[5],"sub_arquivo5");
+    strcpy(subarquivos[6],"sub_arquivo6");
+    strcpy(subarquivos[7],"sub_arquivo7");
+    strcpy(subarquivos[8],"sub_arquivo8");
+    strcpy(subarquivos[9],"sub_arquivo9");
+
+    FILE *pArquivoEntrada;
+    FILE *pArquivoSaida;
+    FILE *pSubarquivo;
+    int numeroDeRegistros=contarRegistros(nome); //Conta a quantidade de registros que o arquivo de entrada tem.
+    int numeroDeSubarquivos;            //quantidade de subarquivos que serÃ£o gerados.
+    int restoSubArquivo;                //resto de numeroDeRegistros/1000
+    int i;                              //contador.
+    int qtdDeSubarquivos;
+
+    pArquivoEntrada=fopen(nome,"rb"); //Abre-se arquivo de entrada para leitura e arquivo de saida para escrita.
+    if (pArquivoEntrada == NULL)
+    {
+    printf("Falha no processamento.\n");
+    exit(0);
+    }
+
+    pArquivoSaida=fopen(nomeSaida,"wb");
+    if (pArquivoSaida == NULL)
+    {
+    printf("Falha no processamento.\n");
+    exit(0);
+    }
+
+    fwrite("0",sizeof(char),1,pArquivoSaida); //Registro de cabeÃ§alho do arquivo de saÃ­da
+    fseek(pArquivoEntrada,sizeof(char),SEEK_SET);
+
+    if(numeroDeRegistros<=1000) //Caso os registros do arquivo de entrada cabem no buffer da RAM, somente 1 sub arquivo Ã© necessÃ¡rio na ordenaÃ§Ã£o.
+    {
+        pSubarquivo=fopen(subarquivos[0],"wb");
+        fread(buffer,sizeof(tRegistro),numeroDeRegistros,pArquivoEntrada);
+        qsort(buffer, numeroDeRegistros, sizeof(tRegistro), cmpFunc);   //Ordena o arquivo.
+        fwrite(buffer,sizeof(tRegistro),numeroDeRegistros,pSubarquivo);
+        fwrite(buffer,sizeof(tRegistro),numeroDeRegistros,pArquivoSaida);
+        fclose(pSubarquivo);
+    }
+    else //Caso o arquivo de entrada contenha mais de 1000 registros, os registros sÃ£o divididos em vÃ¡rios subarquivos.
+    {
+        numeroDeSubarquivos=numeroDeRegistros/1000;
+        for(i=0;i<numeroDeSubarquivos;i++)
+        {
+            pSubarquivo=fopen(subarquivos[i],"wb");
+            fread(buffer,sizeof(tRegistro),1000,pArquivoEntrada); //le o arquivo de entrada.
+            qsort(buffer, 1000, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite(buffer,sizeof(tRegistro),1000,pSubarquivo); //escreve no subarquivo.
+            fclose(pSubarquivo);
+        }
+
+        restoSubArquivo=numeroDeRegistros%1000; //a variÃ¡vel recebe a quantidade de registros que sobra no arquivo de entrada.
+        if(restoSubArquivo!=0)  //Se o resto for diferente de zero, o resto dos registros sÃ£o escritos no prÃ³ximo sub arquivo.
+        {
+            pSubarquivo=fopen(subarquivos[i],"wb");
+            fread(buffer,sizeof(tRegistro),restoSubArquivo,pArquivoEntrada); //le o arquivo de entrada.
+            qsort(buffer, restoSubArquivo, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite(buffer,sizeof(tRegistro),restoSubArquivo,pSubarquivo); //escreve no subarquivo.
+            fclose(pSubarquivo);
+        }
+        //A partir daqui os subarquivos jÃ¡ estao criados e ordenados. quantidade de sub arquivos: i+1
+        qtdDeSubarquivos=i+1; //subarquivos[0] ... subarquivos[qtdDeSubarquivos]
+        /*
+        Multiway merge nos subarquivos para gerar o arquivo de saida ordenado.
+        */
 
 
+    }
+
+    printf("Arquivo gerado.\n");
+    fseek(pArquivoSaida,0,SEEK_SET);
+    fwrite("1",sizeof(char),1,pArquivoSaida); // Atualiza o registro de cabeÃ§alho do arquivo de saida
+    fclose(pArquivoSaida);
+    fclose(pArquivoEntrada);
+    free(buffer);
 }
 
 
+int main (int argc, char *argv[]) {
 
-int main () {
-    srand(time(NULL));
-    int flag=1;     //Váriavel que controla o loop da execução do programa
-    FILE *pf;
-    char strEntrada[30];        //Strings de entrada(input).
+    FILE *pf, *pTotalArquivos;
+    //ARQUIVOS *parquivinho;
+
+    char strEntrada[30];
     char strEntrada2[30];
     char strEntrada3[30];
-    int intEntrada;             //inteiro de entrada(input).
-    int Nregistros;             //numero de registros que terá no arquivo.
+    char strEntradaK[30][30];
 
-    //abertura do totalarquivos.bin para limpar o conteudo, ou criar
-    FILE *pTotalArquivos;
-    pTotalArquivos=fopen("totalarquivos.bin","wb");
+    int flag = 1, flagArgs = 1;
+    int intEntrada = 9;
+    int Nregistros;
+    int contador = 0;
+    int flagOrd = 1;
+
+    srand(time(NULL));
+
+    //abertura do totalarquivos para limpar o conteudo, ou criar
+    pTotalArquivos = fopen("totalarquivos.bin","wb");
     if (pTotalArquivos == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
     fclose(pTotalArquivos);
-    printf("Batata_main_0\n");
 
     //execucao
     while(flag==1)
     {
-        int intEntrada = 9;
+
         while (intEntrada != 0)
         {
-            intEntrada = 9;
-            printf("Digite a intEntrada a ser executada:\n\n");
-            printf("1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?");
-            scanf("%d",&intEntrada);
+            int intEntrada = 8;
+            if ((argc > 1) && (flagArgs)) {
+                intEntrada = atoi(argv[1]);
+            }
+            else {
+                printf("Digite a opcao a ser executada:\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?\n\n>");
+                scanf("%d",&intEntrada);
+                getchar();
+                flagArgs = 0;
+            }
 
             if (intEntrada == 1) {
-                printf("Qual o nome do arquivo que sera gerado?");
-                scanf("%s",strEntrada);
-                printf("Quantos registros terao o arquivo?");
-                scanf("%d",&Nregistros);
-                salvarTotalArquivos(Nregistros,strEntrada,0);           //O arquivo gerado é armazenado no totalarquivos.bin
-                tRegistro *pRegistro = calloc(Nregistros,sizeof(tRegistro));    //Um ponteiro é gerado para a quantidade de registros que será gerada.
+                if(!flagArgs) {
+                    printf("Qual o nome do arquivo que sera gerado?\n>");
+                    scanf("%s",strEntrada);
+                    printf("Quantos registros terao o arquivo?\n>");
+                    scanf("%d",&Nregistros);
+                } else {
+                    strcpy(strEntrada, argv[2]);
+                    Nregistros = atoi(argv[3]);
+                }
+                salvarTotalArquivos(Nregistros,strEntrada,0);           //O arquivo gerado ï¿½ armazenado no totalarquivos.bin
+                tRegistro *pRegistro = calloc(Nregistros,sizeof(tRegistro));    //Um ponteiro ï¿½ gerado para a quantidade de registros que serï¿½ gerada.
                 gerarRegistros(Nregistros,pRegistro,strEntrada);
                 free(pRegistro);
             }
+
             if (intEntrada == 2) {
-                printf("Qual o nome do arquivo que sera lido?");
-                scanf("%s",strEntrada);
-                printf("%d\n",lerTotalArquivos(strEntrada));
-                printarRegistros(lerTotalArquivos(strEntrada),strEntrada);
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo que sera lido?\n>");
+                    scanf("%s",strEntrada);
+                } else {
+                    strcpy(strEntrada, argv[2]);
+                }
+                int lerBin = 0, contar = 0;
+                contar = contarRegistros(strEntrada);
+                lerBin = lerTotalArquivos(strEntrada);
+                if (lerBin > 0)
+                    printarRegistros(lerBin,strEntrada);
+                else
+                    printarRegistros(contar, strEntrada);
             }
+
             if (intEntrada == 3) {
-                printf("Qual o nome do arquivo que sera ordenado?");
-                scanf("%s",strEntrada);
-                intEntrada=lerTotalArquivos(strEntrada); //Conta quantos registros tem no arquivo que será ordenado.
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo que sera ordenado?\n>");
+                    scanf("%s",strEntrada);
+                } else {
+                    strcpy(strEntrada, argv[2]);
+                }
+                intEntrada=contarRegistros(strEntrada); //Conta quantos registros tem no arquivo que serï¿½ ordenado.
                 tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
 
                 lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);     //Le o arquivo para a RAM
 
                 qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
 
-                printf("Qual o nome do arquivo novo?");
-                scanf("%s",strEntrada);
+                if (!flagArgs){
+                    printf("Qual o nome do arquivo novo?\n>");
+                    scanf("%s",strEntrada);
+                } else {
+                    strcpy(strEntrada, argv[3]);
+                }
                 gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);       //Grava o arquivo ordenado.
                 free(pRegistro);
 
                 salvarTotalArquivos(intEntrada,strEntrada,1);           //salva o arquivo gerado no totalarquivos.bin
                 printf("Arquivo de dados de entrada ordenado.\n");
                 printf("Arquivo gerado.\n");
+                intEntrada = 8;
             }
+
             if (intEntrada == 4) {
-                printf("Qual o nome do primeiro arquivo?");
-                scanf("%s",strEntrada);
-                if(checarOrdenacao(strEntrada))     //checa se o arquivo 1 está ordenado.
+                if (!flagArgs) {
+                    printf("Qual o nome do primeiro arquivo?\n>");
+                    scanf("%s",strEntrada);
+                } else strcpy(strEntrada, argv[2]);
+                if(!checarOrdenacao(strEntrada))  //checa se o arquivo 1 estï¿½ ordenado, se nao soubermos, ordena ele
                 {
-                    printf("Qual o nome do segundo arquivo?");
+                    intEntrada=contarRegistros(strEntrada); //Conta quantos registros tem no arquivo que serï¿½ ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
+
+                    lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);       //Grava o arquivo ordenado.
+                }
+                if (!flagArgs) {
+                    printf("Qual o nome do segundo arquivo?\n>");
                     scanf("%s",strEntrada2);
-                    if(checarOrdenacao(strEntrada2))        //checa se o arquivo 2 está ordenado.
-                    {
-                        printf("Qual o nome do arquivo gerado?");
-                        scanf("%s",strEntrada3);
-                        merging(strEntrada,strEntrada2,strEntrada3);        //Realiza o merging
-                        salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
-                        printf("Arquivo gerado.\n");
-                    }
-                    else
-                    {
-                        printf("Arquivo nao esta ordenado ou nao existe.\n");
-                    }
-                }
-                else
+                } else strcpy(strEntrada2, argv[3]);
+
+                if(!checarOrdenacao(strEntrada2))        //checa se o arquivo 2 estï¿½ ordenado, se nao soubermos, ordena ele
                 {
-                    printf("Arquivo nao esta ordenado ou nao existe.\n");
+                    intEntrada=contarRegistros(strEntrada2); //Conta quantos registros tem no arquivo que serï¿½ ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
+
+                    lerArquivoParaRAM(pRegistro,strEntrada2,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada2,intEntrada);       //Grava o arquivo ordenado.
                 }
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo gerado?\n>");
+                    scanf("%s",strEntrada3);
+                } else {
+                    strcpy(strEntrada3, argv[4]);
+                }
+                merging(strEntrada,strEntrada2,strEntrada3);        //Realiza o merging
+                salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
+                printf("Arquivo gerado.\n");
             }
+
             if (intEntrada == 5) {
-                printf("Qual o nome do primeiro arquivo?");
-                scanf("%s",strEntrada);
-                if(checarOrdenacao(strEntrada))  //checa se o arquivo 1 está ordenado.
+                if (!flagArgs) {
+                    printf("Qual o nome do primeiro arquivo?\n>");
+                    scanf("%s",strEntrada);
+                } else strcpy(strEntrada, argv[2]);
+                if(!checarOrdenacao(strEntrada))  //checa se o arquivo 1 estï¿½ ordenado, se nao soubermos, ordena ele
                 {
-                    printf("Qual o nome do segundo arquivo?");
+                    intEntrada=contarRegistros(strEntrada); //Conta quantos registros tem no arquivo que serï¿½ ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
+
+                    lerArquivoParaRAM(pRegistro,strEntrada,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada,intEntrada);       //Grava o arquivo ordenado.
+                }
+                if (!flagArgs) {
+                    printf("Qual o nome do segundo arquivo?\n>");
                     scanf("%s",strEntrada2);
-                    if(checarOrdenacao(strEntrada2))        //checa se o arquivo 2 está ordenado.
-                    {
-                        printf("Qual o nome do arquivo gerado?");
-                        scanf("%s",strEntrada3);
-                        matching(strEntrada,strEntrada2,strEntrada3,contarRegistros(strEntrada),contarRegistros(strEntrada2));  //realiza o matching
-                        salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
-                        printf("Arquivo gerado.\n");
-                    }
-                    else
-                    {
-                        printf("Arquivo nao esta ordenado ou nao existe.\n");
-                    }
-                }
-                else
+                } else strcpy(strEntrada2, argv[3]);
+                if(!checarOrdenacao(strEntrada2))        //checa se o arquivo 2 estï¿½ ordenado, se nao soubermos, ordena ele
                 {
-                    printf("Arquivo nao esta ordenado ou nao existe.\n");
+                    intEntrada=contarRegistros(strEntrada2); //Conta quantos registros tem no arquivo que serï¿½ ordenado.
+                    tRegistro *pRegistro=calloc(intEntrada,sizeof(tRegistro));
+
+                    lerArquivoParaRAM(pRegistro,strEntrada2,intEntrada);     //Le o arquivo para a RAM
+                    qsort(pRegistro, intEntrada, sizeof(tRegistro), cmpFunc); //Ordena o arquivo.
+                    gravaArquivoParaMEM(pRegistro,strEntrada2,intEntrada);       //Grava o arquivo ordenado.
                 }
-            }
-            if (intEntrada == 6) {
-                getchar();
-                ARQUIVOS *arquivo;
-                printf("Digite os nomes dos arquivos\n");
-                printf("BAtata_-2");
-                nomeArquivos(&arquivo);
-                printf("BAtata_-1");
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo gerado?\n>");
+                    scanf("%s",strEntrada3);
+                } else {
+                    strcpy(strEntrada3, argv[4]);
+                }
+                matching(strEntrada,strEntrada2,strEntrada3,contarRegistros(strEntrada),contarRegistros(strEntrada2));  //realiza o matching
+                salvarTotalArquivos(contarRegistros(strEntrada3),strEntrada3,1);        //salva o arquivo gerado no totalarquivos.bin
+                printf("Arquivo gerado.\n");
 
             }
-            if (intEntrada == 0) {
+
+            if (intEntrada == 6) {
+                ARQUIVOS *arquivo;
+                if (!flagArgs) {
+                    printf("Digite os nomes dos arquivos\n>");
+                    nomeArquivos(&arquivo);
+                    multiwaymerge(&arquivo);
+                } else {
+                    nomeArquivosArgv(&arquivo, argc, argv);
+                }
+
+            }
+
+            if (intEntrada == 7) {//(merge sort externo)
+                if (!flagArgs) {
+                    printf("Qual o nome do arquivo que sera ordenado?\n>");
+                    scanf("%s",strEntrada);
+                    printf("Qual o nome do arquivo novo?\n>");
+                    scanf("%s",strEntrada2);
+                } else {
+                    strcpy(strEntrada, argv[2]);
+                    strcpy(strEntrada2, argv[3]);
+                }
+                mergeSortExterno(strEntrada,strEntrada2);
+                salvarTotalArquivos(contarRegistros(strEntrada2),strEntrada2,1);
+            }
+
+            if ((intEntrada == 0) || (flagArgs)) {
                 flag = 0;
                 break;
             }
