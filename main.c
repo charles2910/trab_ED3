@@ -180,7 +180,7 @@ void coletorLixo(tRegistro *registro)   //remove os espacos vazios nos campos, a
 {
     for(int i=0;i<c2;i++)       //loop que varia at� o tamanho do campo 2(30bytes)
    {
-       if((*registro).str1[i]=='\0')    //quando acha o \0, todos os caracteres seguintes s�o substituidos por @
+       if((*registro).str1[i]=='\r')    //quando acha o \0, todos os caracteres seguintes s�o substituidos por @
        {
            (*registro).str1[i]='@';
            for(i+1;i<c2;i++)
@@ -199,7 +199,7 @@ void coletorLixo(tRegistro *registro)   //remove os espacos vazios nos campos, a
 
    for(int i=0;i<c3;i++)        //mesma l�gica, s� que o loop varia ate o tamanho do campo 3(20 bytes)
    {
-       if((*registro).str2[i]=='\0')
+       if((*registro).str2[i]=='\r')
        {
            (*registro).str2[i]='@';
            for(i+1;i<c3;i++)
@@ -1260,13 +1260,18 @@ void multiwaymerge(ARQUIVOS **pArq) {
         //att arvoreMin
         if (arvoreMin[0].index < 63) {
             arvoreMin[0].index += 1;
-            if (paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero == 0) {
+            if ((paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero == 0) || (paginas[arvoreMin[0].arqIndex][arvoreMin[0].index].numero < paginas[arvoreMin[0].arqIndex][arvoreMin[0].index - 1].numero)) {
                 arvoreMin[0].registro->numero = 2147483647;
                 flag_fim++;
             } else
             arvoreMin[0].registro = &(paginas[arvoreMin[0].arqIndex][arvoreMin[0].index]);
         } else {
-            atualizarPaginaRAM(paginas[arvoreMin[0].arqIndex], fp[arvoreMin[0].arqIndex]);
+            if(!atualizarPaginaRAM(paginas[arvoreMin[0].arqIndex], fp[arvoreMin[0].arqIndex])) {
+                arvoreMin[0].registro->numero = 2147483647;
+                flag_fim++;
+            };
+            arvoreMin[0].index = 0;
+            arvoreMin[0].registro = &(paginas[arvoreMin[0].arqIndex][arvoreMin[0].index]);
         }
     }
     fseek(fp[pArquivos->numArq], 0, SEEK_SET);
@@ -1344,6 +1349,7 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
             pSubarquivo=fopen(subarquivos[i],"wb");
             fread(buffer,sizeof(tRegistro),1000,pArquivoEntrada); //le o arquivo de entrada.
             qsort(buffer, 1000, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite("1", 1, sizeof(char), pSubarquivo);
             fwrite(buffer,sizeof(tRegistro),1000,pSubarquivo); //escreve no subarquivo.
             fclose(pSubarquivo);
         }
@@ -1354,6 +1360,7 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
             pSubarquivo=fopen(subarquivos[i],"wb");
             fread(buffer,sizeof(tRegistro),restoSubArquivo,pArquivoEntrada); //le o arquivo de entrada.
             qsort(buffer, restoSubArquivo, sizeof(tRegistro), cmpFunc);   //Ordena o subarquivo.
+            fwrite("1", 1, sizeof(char), pSubarquivo);
             fwrite(buffer,sizeof(tRegistro),restoSubArquivo,pSubarquivo); //escreve no subarquivo.
             fclose(pSubarquivo);
         }
@@ -1577,8 +1584,9 @@ int main (int argc, char *argv[]) {
                     multiwaymerge(&arquivo);
                 } else {
                     nomeArquivosArgv(&arquivo, argc, argv);
+                    multiwaymerge(&arquivo);
                 }
-
+                printf("Arquivo Gerado\n");
             }
 
             if (intEntrada == 7) {//(merge sort externo)
