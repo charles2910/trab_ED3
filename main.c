@@ -4,6 +4,8 @@
 #include <time.h>
 #include <ctype.h>
 
+#define	tol	0.001	// tolerancia da porcentagem de repeticoes
+
 //Tamanho dos registros constante 64 bytes
 #define c1 4
 #define c2 30
@@ -169,6 +171,7 @@ void heapSortCampo4(NO_HEAP arr[], int n)
     }
 }
 
+
 /* Fun��o que remove os caracteres que contem lixo(espa�os que sobraram dentro das strings de campo) adicionando o
 caractere @ a partir do \0 (final da string). Espa�os em branco s�o substituidos por _ para facilitar a visualiza��o
 do campo. */
@@ -289,150 +292,255 @@ int printarRegistros(int numeroRegistros,char *nome)
 }
 
 
+//FUNCOES DA REPETICAO
+// Calcula a quantidade de numeros aleatarios gerados para poder fazer o controle de porcentagem de recepeticao
+// Apenas soma todas as posicoes do vetor de controle de repeticaes
+int calcula_gerados(int *v, int tam) {
+	//printf("log: calcula_gerados: inicio\n");
+	int i, cont = 0;
+	for(i = 0; i < tam; i++)
+		cont += v[i];
+	return cont;
+}
+
+// Calcula a nova porcentagem de repeticao apos a geracao de um novo valor aleatorio
+// Mesma coisa que a funcao calcula_gerados, porem faz a implementacao de novos valores e da a porcentagem atualizada de numeros gerados
+void calcula_rep(int *v, int min, int max, int valor, double *rep, int n) {
+	if(v[valor-min] == 2) *rep += 2.0/n;
+	else if(v[valor-min] > 2) *rep += 1.0/n;
+
+}
+
+// Gera um novo valor aleatorio de acordo com o estado do vetor de controle
+// Gera o novo valor de tres formas diferentes:
+//	estado 1: forca a parada de geracao de valor aleatorios
+//	estado 2: forca a geracao de valor aleatorios
+//	estado 3: gera qualquer valor aleatorio
+int controla_rep(int *v, int min, int max, int estado) {
+	int n = max-min+1;
+	int valor, sair = 0;
+	while(!sair) {
+		valor = (rand()%n)+min;
+		if((v[valor-min] == 0 && estado == 1) || (v[valor-min] >= 1 && estado == 2) || (estado == 3))
+			sair = 1;
+	}
+	return valor;
+}
+
+// Funcao que verifica qual eh o estado do vetor e retorna o valor gerado
+int gera_valor(int *v, int min, int max, double rep, double maxRep, int n) {
+	//printf("log: gera_valor: inicio\n");
+	int valor, tam = max-min+1;
+	double gerados = (double) calcula_gerados(v, tam)/n;
+	if(rep >= maxRep-tol) {
+		// Se a taxa de repeticao e maior do que a taxa maxima de repeticao menos a tolerancia a funcao para de gerar numeros repetidos
+		valor = controla_rep(v, min, max, 1);
+	} else if(gerados > 0.1 && 4*n*(maxRep-tol-rep) >= n*(1-gerados)) {
+		// Se ja foram gerados mais de 10% do total de numeros aleatorios...
+		// E se 'gerados'(acima) for maior que a porcentagem de numeros que ainda precisam ser gerados
+		// (isso e um parametro que julguei bom, pq se estiverem faltando muitos numeros repetidos para se gerar,
+		// mas faltam poucos numeros a serem gerados, e necessario forcar a repeticao)
+		// forca a geracao de numeros aleatorios
+		valor = controla_rep(v, min, max, 2);
+	} else {
+		// Caso contrÃ¡rio...
+		// gera qualquer numero aleatorio
+		valor = controla_rep(v, min, max, 3);
+	}
+	return valor;
+}
+
+//Retorna o valor final aleatorio
+int insere_valor(int *v, int min, int max, double *rep, double maxRep, int n) {
+	int valor = gera_valor(v, min, max, *rep, maxRep, n);
+	v[valor-min]++;
+	calcula_rep(v, min, max, valor, &(*rep), n);
+	return valor;
+}
+//Funcao que gera os registros.
+//Parametros: numero de registros, ponteiro para registro, nome do arquivo
 void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
 {
     FILE *pArquivo;
     FILE *pArquivoCidades;
     FILE *pArquivoNomes;
-    int intRandom;
+    FILE *pArquivoDatas;
 
+    //Gerar vetores(vetorRepC1, vetorRepC2, vetorRepC3, vetorRepC4) que contém números com as respectivas repetições(0.3, 0.25, 0.2, 0.15)
+    int min, max;
+	int *v = NULL;
+	double maxRep, rep = 0;
+	int tam;
+
+	//Os valores gerados são escritos num arquivo arqRep.txt e posteriormente passados aos vetores.
+	//Campo1
+    FILE *ArqRep;
+    ArqRep = fopen("arqRep.txt", "w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=50000;
+	tam = max-min+1;
+	int *vetorRepC1=calloc(numeroRegistros,sizeof(int));
+	v = (int *) calloc(max-min+1, sizeof(int));
+	for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.3, numeroRegistros));
+	}
+    free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC1[k]);
+    }
+    fclose(ArqRep);
+
+    //Campo2
+    ArqRep = fopen("arqRep.txt","w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=20577;
+    tam = max-min+1;
+    rep=0;
+    int *vetorRepC2=calloc(numeroRegistros,sizeof(int));
+    v = (int *) calloc(max-min+1, sizeof(int));
+    for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.25, numeroRegistros));
+	}
+	free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC2[k]);
+    }
+    fclose(ArqRep);
+
+    //Campo3
+    ArqRep = fopen("arqRep.txt","w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=6243;
+    tam = max-min+1;
+    rep=0;
+    int *vetorRepC3=calloc(numeroRegistros,sizeof(int));
+    v = (int *) calloc(max-min+1, sizeof(int));
+    for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.20, numeroRegistros));
+	}
+	free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC3[k]);
+    }
+    fclose(ArqRep);
+
+    //Campo4
+    ArqRep = fopen("arqRep.txt","w+");
+    if (ArqRep == NULL){printf("Falha no processamento.\n");
+    exit(0);}
+    min=0;
+	max=7812;
+    tam = max-min+1;
+    rep=0;
+    int *vetorRepC4=calloc(numeroRegistros,sizeof(int));
+    v = (int *) calloc(max-min+1, sizeof(int));
+    for(int i = 0; i < numeroRegistros; i++) {
+		fprintf(ArqRep, "%d\n", insere_valor(v, min, max, &rep, 0.15, numeroRegistros));
+	}
+	free(v);
+    fseek(ArqRep,0,SEEK_SET);
+    for(int k=0;k<numeroRegistros;k++)
+    {
+        fscanf(ArqRep,"%d",&vetorRepC4[k]);
+    }
+    fclose(ArqRep);
+    //Vetores de números com repetição gerados.
+
+    //Abertura do arquivo para escrita, abertura dos arquivos cities.txt, names.txt e datas.txt para leitura.
     pArquivo=fopen(nome,"wb");
     if (pArquivo == NULL)
     {
     printf("Falha no processamento.\n");
     exit(0);
     }
-    fwrite("0",sizeof(char),1,pArquivo); // registro de cabe�alho
 
-    pArquivoCidades=fopen("cities.txt","rb");
-    if (pArquivoCidades == NULL)
-    {
+    fwrite("0",sizeof(char),1,pArquivo); // registro de cabeçalho
+
+
+    pArquivoCidades=fopen("cities.txt","r");
+    if (pArquivoCidades == NULL){
         printf("Falha no processamento.\n");
-        exit(0);
+        exit(0);}
+
+    pArquivoNomes=fopen("names.txt","r");
+    if (pArquivoNomes == NULL){
+        printf("Falha no processamento.\n");
+        exit(0);}
+
+    pArquivoDatas=fopen("datas.txt","r");
+    if (pArquivoDatas == NULL){
+        printf("Falha no processamento.\n");
+        exit(0);}
+
+    //O conteúdo dos arquivos lidos é passado para vetores de strings(matrizes de linhas que representam um índice e colunas com os respectivos caracteres).
+    //Com o valor dos vetores de números repetidos, buscamos o respectivo conteúdo de acordo com as linhas que representam um índice primário.
+
+    //geraçao do vetor de cidades para o Campo 2:
+    char vetorCidades[20578][30];  //linhas: 0 a 20577
+    for(int i=0;i<20578;i++) {
+        fgets(vetorCidades[i],30,pArquivoCidades);
+        for(int j=0;j<30;j++)
+        {
+            if(vetorCidades[i][j]=='\n')
+            {
+                vetorCidades[i][j]='\0';
+                j=31;
+            }
+        }
+    }
+    //geraçao do vetor de nomes para o Campo 3:
+    char vetorNomes[6244][20];  //0 a 6243
+    for(int i=0;i<6244;i++) {
+        fgets(vetorNomes[i],20,pArquivoNomes);
+        for(int j=0;j<20;j++)
+        {
+            if(vetorNomes[i][j]=='\n')
+            {
+                vetorNomes[i][j]='\0';
+                j=21;
+            }
+        }
     }
 
-    pArquivoNomes=fopen("names.txt","rb");
-    if (pArquivoNomes == NULL)
-    {
-        printf("Falha no processamento.\n");
-        exit(0);
+    //geraçao do vetor de datas para o Campo 4:
+    char vetorDatas[7812][20];
+    for(int i=0;i<7812;i++) {
+        fgets(vetorDatas[i],20,pArquivoDatas);
+        for(int j=0;j<20;j++)
+        {
+            if(vetorDatas[i][j]=='\n')
+            {
+                vetorDatas[i][j]='\0';
+                j=31;
+            }
+        }
     }
+    //Com o vetor de repetição, e os vetores dos dados, utiliza-se o valor do vetor de repetição para encontrar a linha respectiva no vetor de dados de cada campo.
+    //Com isso, é possível atribuir ao registro estes dados com certa repetição contida no vetor de números com repetição.
+    //O registro é escrito no arquivo de saída após ter o lixo removido pela função coletorLixo e depois de ser passado para Upper Case.
 
-
-    for(int i=0;i<numeroRegistros;i++,pReg++)
+    for(int i=0;i<numeroRegistros;i++)
     {
-        //Gerador de numero
-        pReg->numero=rand()%10000;
-
-
-        //Gerador de cidade (campo 2)
-        int cont=0;
-        int flag=1;
-
-        intRandom=rand()%20580;
-
-        fseek(pArquivoCidades,0,SEEK_SET);
-        while ((fgets(pReg->str1, sizeof (pReg->str1), pArquivoCidades) != NULL)&&(flag==1))
-        {
-            if (cont == intRandom)
-            {
-            flag=0;
-            }
-            else
-            {
-            cont++;
-            }
-        }
-        for(int j=0;j<c2;j++)
-        {
-            if((pReg->str1[j])=='\r')
-            {
-                (pReg->str1[j])='\0';
-                j=c2;
-            }
-        }
-
-
-        //Gerador de nomes (campo 3)
-        int cont2=0;
-        int flag2=1;
-
-        intRandom=rand()%4945;
-
-        fseek(pArquivoNomes,0,SEEK_SET);
-        while ((fgets(pReg->str2, sizeof (pReg->str2), pArquivoNomes) != NULL)&&(flag2==1))
-        {
-            if (cont2 == intRandom)
-            {
-            flag2=0;
-            }
-            else
-            {
-            cont2++;
-            }
-        }
-        for(int j=0;j<c3;j++)
-        {
-            if((pReg->str2[j])=='\r')
-            {
-                (pReg->str2[j])='\0';
-                j=c3;
-            }
-        }
-
-        //Gerador de data de 1900 a 2019 (ano)
-        intRandom=rand()%4;
-        switch(intRandom)
-        {
-        case 3:
-            pReg->data[0]=3+'0';
-            pReg->data[1]=rand()%2 +'0';
-            pReg->data[2]='/';
-            break;
-        default:
-            pReg->data[0]=intRandom +'0';
-            pReg->data[1]=rand()%10 +'0';
-            pReg->data[2]='/';
-            break;
-        case 0:
-            pReg->data[0]=0 +'0';
-            pReg->data[1]=(1+rand()%9) +'0';
-            pReg->data[2]='/';
-        }
-
-        intRandom=rand()%2;
-        switch(intRandom)
-        {
-        case 1:
-            pReg->data[3]=1+'0';
-            pReg->data[4]=rand()%3 +'0';
-            pReg->data[5]='/';
-            break;
-        default:
-            pReg->data[3]=intRandom +'0';
-            pReg->data[4]=(1+rand()%9) +'0';
-            pReg->data[5]='/';
-            break;
-        }
-
-        intRandom=(1 + rand()%2);
-        switch(intRandom)
-        {
-        case 2:
-            pReg->data[6]='2';
-            pReg->data[7]='0';
-            pReg->data[8]=(rand()%2)+ '0';
-            pReg->data[9]=(rand()%10)+ '0';
-            break;
-        case 1:
-            pReg->data[6]='1';
-            pReg->data[7]='9';
-            pReg->data[8]= (rand()%10)+ '0';
-            pReg->data[9]= (rand()%10)+ '0';
-        }
-        //Coloca @ nos espacos vazios que contem lixo
+        pReg->numero=vetorRepC1[i];
+        memcpy(pReg->str1,vetorCidades[vetorRepC2[i]],30);
+        memcpy(pReg->str2,vetorNomes[vetorRepC3[i]],20);
+        memcpy(pReg->data,vetorDatas[vetorRepC4[i]],10);
         coletorLixo(pReg);
+
         //loop que varia at� encontrar o @ na string. Passa para uppercase todos os caracteres anteriores ao @. Tanto para o campo 2 quanto para o campo 3.
+
         for(int j=0;(pReg->str1[j])!='@';j++)
         {
             pReg->str1[j]=toupper(pReg->str1[j]);
@@ -444,12 +552,22 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
         }
 
         fwrite(pReg,sizeof(tRegistro),1,pArquivo);  //Escreve o registro no arquivo que est� sendo gerado.
+
     }
+    free(vetorRepC1);
+    free(vetorRepC2);
+    free(vetorRepC3);
+    free(vetorRepC4);
+
     fseek(pArquivo,0,SEEK_SET);
-    fwrite("1",sizeof(char),1,pArquivo);    // Atualiza o registro de cabe�alho.
-    fclose(pArquivo);                       //Fecha os arquivos que est�o sendo usados.
+
+    fwrite("1",sizeof(char),1,pArquivo);  // Atualiza o registro de cabeçalho.
+
+    fclose(pArquivo);                     //Fecha os arquivos que estão sendo usados.
+
     fclose(pArquivoCidades);
     fclose(pArquivoNomes);
+    fclose(pArquivoDatas);
     printf("Arquivo gerado.\n");
 }
 
@@ -1124,6 +1242,7 @@ void multiwaymerge(ARQUIVOS **pArq) {
     fwrite("0", sizeof(char), 1, fp[pArquivos->numArq]);
 
     while(flag_fim < pArquivos->numArq) {
+
         //heapsort do campo 4 ao campo 1 para seguir especificação
         heapSortCampo4(arvoreMin, pArquivos->numArq);
         heapSortCampo3(arvoreMin, pArquivos->numArq);
@@ -1294,7 +1413,9 @@ int main (int argc, char *argv[]) {
                 intEntrada = atoi(argv[1]);
             }
             else {
+
                 printf("Digite a opcao a ser executada:\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/6-multiway merging/7-sort merge externo/0-sair?\n\n>");
+
                 scanf("%d",&intEntrada);
                 getchar();
                 flagArgs = 0;
