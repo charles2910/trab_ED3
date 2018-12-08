@@ -1363,7 +1363,16 @@ void mergeSortExterno(char *nome,char *nomeSaida) {
         Multiway merge nos subarquivos para gerar o arquivo de saida ordenado.
         */
 
+        ARQUIVOS *multiway = (ARQUIVOS *) malloc(sizeof(ARQUIVOS));
+        multiway->arqEntrada = (char **) calloc(qtdDeSubarquivos, sizeof(char *));
+        for (int i = 0; i < qtdDeSubarquivos; i++){
+            multiway->arqEntrada[i] = (char *) malloc(strlen(subarquivos[i]) + 1);
+            strcpy(multiway->arqEntrada[i], subarquivos[i]);
+        }
+        strcpy(multiway->arqSaida, nomeSaida);
+        multiway->numArq = qtdDeSubarquivos;
 
+        multiwaymerge(&multiway);
     }
 
     printf("Arquivo gerado.\n");
