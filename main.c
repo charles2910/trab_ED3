@@ -63,7 +63,7 @@ void swap (NO_HEAP vetor[], int i, int j) {
     vetor[j] = aux;
 }
 
-void heapify(NO_HEAP arr[], int n, int i) {
+void heapifyCampo1(NO_HEAP arr[], int n, int i) {
     int smaller = i;
     int l = 2 * i + 1;
     int r = 2 * i + 2;
@@ -75,20 +75,102 @@ void heapify(NO_HEAP arr[], int n, int i) {
     if (smaller != i)
     {
         swap(arr, i, smaller);
-        heapify(arr, n, smaller);
+        heapifyCampo1(arr, n, smaller);
     }
 }
 
-void heapSort(NO_HEAP arr[], int n)
+void heapSortCampo1(NO_HEAP arr[], int n)
 {
     for (int i = n / 2 - 1; i >= 0; i--)
-        heapify(arr, n, i);
+        heapifyCampo1(arr, n, i);
     for (int i = n - 1; i >= 0; i--)
     {
         swap(arr, 0, i);
-        heapify(arr, i, 0);
+        heapifyCampo1(arr, i, 0);
     }
 }
+
+void heapifyCampo2(NO_HEAP arr[], int n, int i) {
+    int smaller = i;
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+
+    if (l < n && strcmp(arr[l].registro->str1, arr[smaller].registro->str1) > 0)
+        smaller = l;
+    if (r < n && strcmp(arr[l].registro->str1, arr[smaller].registro->str1) > 0)
+        smaller = r;
+    if (smaller != i)
+    {
+        swap(arr, i, smaller);
+        heapifyCampo2(arr, n, smaller);
+    }
+}
+
+void heapSortCampo2(NO_HEAP arr[], int n)
+{
+    for (int i = n / 2 - 1; i >= 0; i--)
+        heapifyCampo2(arr, n, i);
+    for (int i = n - 1; i >= 0; i--)
+    {
+        swap(arr, 0, i);
+        heapifyCampo2(arr, i, 0);
+    }
+}
+
+void heapifyCampo3(NO_HEAP arr[], int n, int i) {
+    int smaller = i;
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+
+    if (l < n && strcmp(arr[l].registro->str2, arr[smaller].registro->str2) > 0)
+        smaller = l;
+    if (r < n && strcmp(arr[l].registro->str2, arr[smaller].registro->str2) > 0)
+        smaller = r;
+    if (smaller != i)
+    {
+        swap(arr, i, smaller);
+        heapifyCampo3(arr, n, smaller);
+    }
+}
+
+void heapSortCampo3(NO_HEAP arr[], int n)
+{
+    for (int i = n / 2 - 1; i >= 0; i--)
+        heapifyCampo3(arr, n, i);
+    for (int i = n - 1; i >= 0; i--)
+    {
+        swap(arr, 0, i);
+        heapifyCampo3(arr, i, 0);
+    }
+}
+
+void heapifyCampo4(NO_HEAP arr[], int n, int i) {
+    int smaller = i;
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+
+    if (l < n && strcmp(arr[l].registro->data, arr[smaller].registro->data) > 0)
+        smaller = l;
+    if (r < n && strcmp(arr[l].registro->data, arr[smaller].registro->data) > 0)
+        smaller = r;
+    if (smaller != i)
+    {
+        swap(arr, i, smaller);
+        heapifyCampo4(arr, n, smaller);
+    }
+}
+
+void heapSortCampo4(NO_HEAP arr[], int n)
+{
+    for (int i = n / 2 - 1; i >= 0; i--)
+        heapifyCampo4(arr, n, i);
+    for (int i = n - 1; i >= 0; i--)
+    {
+        swap(arr, 0, i);
+        heapifyCampo4(arr, i, 0);
+    }
+}
+
 
 /* Fun��o que remove os caracteres que contem lixo(espa�os que sobraram dentro das strings de campo) adicionando o
 caractere @ a partir do \0 (final da string). Espa�os em branco s�o substituidos por _ para facilitar a visualiza��o
@@ -383,7 +465,9 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     printf("Falha no processamento.\n");
     exit(0);
     }
+
     fwrite("0",sizeof(char),1,pArquivo); // registro de cabeçalho
+
 
     pArquivoCidades=fopen("cities.txt","r");
     if (pArquivoCidades == NULL){
@@ -454,6 +538,9 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
         memcpy(pReg->str2,vetorNomes[vetorRepC3[i]],20);
         memcpy(pReg->data,vetorDatas[vetorRepC4[i]],10);
         coletorLixo(pReg);
+
+        //loop que varia at� encontrar o @ na string. Passa para uppercase todos os caracteres anteriores ao @. Tanto para o campo 2 quanto para o campo 3.
+
         for(int j=0;(pReg->str1[j])!='@';j++)
         {
             pReg->str1[j]=toupper(pReg->str1[j]);
@@ -463,7 +550,9 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
         {
             pReg->str2[j]=toupper(pReg->str2[j]);
         }
-        fwrite(pReg,sizeof(tRegistro),1,pArquivo);
+
+        fwrite(pReg,sizeof(tRegistro),1,pArquivo);  //Escreve o registro no arquivo que est� sendo gerado.
+
     }
     free(vetorRepC1);
     free(vetorRepC2);
@@ -471,9 +560,11 @@ void gerarRegistros(int numeroRegistros, tRegistro *pReg,char *nome)
     free(vetorRepC4);
 
     fseek(pArquivo,0,SEEK_SET);
+
     fwrite("1",sizeof(char),1,pArquivo);  // Atualiza o registro de cabeçalho.
 
     fclose(pArquivo);                     //Fecha os arquivos que estão sendo usados.
+
     fclose(pArquivoCidades);
     fclose(pArquivoNomes);
     fclose(pArquivoDatas);
@@ -1151,9 +1242,14 @@ void multiwaymerge(ARQUIVOS **pArq) {
     fwrite("0", sizeof(char), 1, fp[pArquivos->numArq]);
 
     while(flag_fim < pArquivos->numArq) {
-        heapSort(arvoreMin, pArquivos->numArq);
 
-        //outros heap heapSort
+        //heapsort do campo 4 ao campo 1 para seguir especificação
+        heapSortCampo4(arvoreMin, pArquivos->numArq);
+        heapSortCampo3(arvoreMin, pArquivos->numArq);
+        heapSortCampo2(arvoreMin, pArquivos->numArq);
+        heapSortCampo1(arvoreMin, pArquivos->numArq);
+
+
 
         //pop pro arquivo de escrita
         fwrite(&(arvoreMin[0].registro->numero), sizeof(int), 1, fp[pArquivos->numArq]);
@@ -1317,7 +1413,9 @@ int main (int argc, char *argv[]) {
                 intEntrada = atoi(argv[1]);
             }
             else {
-                printf("Digite a opcao a ser executada:\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/0-sair?\n\n>");
+
+                printf("Digite a opcao a ser executada:\n1-gerar arquivo/2-printar arquivo/3-ordenar arquivo/4-merging/5-matching/6-multiway merging/7-sort merge externo/0-sair?\n\n>");
+
                 scanf("%d",&intEntrada);
                 getchar();
                 flagArgs = 0;
